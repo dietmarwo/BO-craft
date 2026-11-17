@@ -463,6 +463,53 @@
             "endpoint",
             "study"
           ]
+        },
+        "acq_maxiter": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "outcome_transform": {
+          "enum": [
+            "standardize",
+            "log",
+            "bilog"
+          ]
+        },
+        "feasibility_probability": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 0.999
+        },
+        "replication": {
+          "enum": [
+            "none",
+            "incumbent"
+          ]
+        },
+        "replication_threshold": {
+          "type": "number",
+          "minimum": 0.05,
+          "exclusiveMaximum": 1
+        },
+        "max_replicates": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "trust_region": {
+          "type": "boolean"
+        },
+        "num_fantasies": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 128
+        },
+        "sampler": {
+          "enum": [
+            "tpe",
+            "gp"
+          ]
         }
       },
       "required": [

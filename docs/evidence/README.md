@@ -12,3 +12,5 @@
 | constrained | optuna | 0.0995714 | 30 | 0.1972 | 0.7056 [0.4237, 1.208] |
 
 Recommendation quality uses the known noiseless mean, not the most favorable noisy observation. Fresh real-world replication is still required. The 20-dimensional panel is a five-seed pilot. Service startup, imports and runtime jobs are measured separately by the integration examples.
+
+These are the 0.1.0 panels. The benchmarks of the 17 November improvements (eight problems, predeclared gates, development and confirmation seeds) are in [plan-2026-11-17](plan-2026-11-17/README.md). Their recorded cells are rechecked by `benchmarks/summarize.py --verify`.

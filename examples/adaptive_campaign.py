@@ -1,6 +1,7 @@
 """A complete admitted local noisy campaign, without a systemd requirement."""
 
 import argparse
+import json
 import sys
 from contextlib import closing
 from pathlib import Path
@@ -86,6 +87,7 @@ def main():
                 "status": result,
                 "observations": state["observations"],
                 "jobs": state["jobs"],
+                "answer": json.loads((base / "campaign" / "answer.json").read_text()),
                 "no_duplicate_continuation": True,
             },
         )

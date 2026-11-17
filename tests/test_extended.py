@@ -81,9 +81,10 @@ def test_pruning_retains_execution_uncertainty():
 
 def test_unsupported_before_initial_design():
     r = base()
-    r["problem"]["parameters"][0]["type"] = "integer"
-    r["problem"]["parameters"][0]["lower"] = 0
-    r["problem"]["parameters"][0]["upper"] = 4
+    r["problem"]["parameters"] = [
+        {"name": "kind", "type": "categorical", "choices": ["a", "b"]},
+        {"name": "x", "type": "continuous", "lower": 0, "upper": 1, "active_if": {"kind": ["a"]}},
+    ]
     with pytest.raises(Error, match="Optuna"):
         propose(r)
 

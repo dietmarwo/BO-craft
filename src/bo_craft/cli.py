@@ -17,7 +17,7 @@ def main(argv=None):
         p.add_argument("input")
         p.add_argument("--output")
         if name == "recommend":
-            p.add_argument("--kind", choices=["empirical", "posterior"], default="empirical")
+            p.add_argument("--kind", choices=["empirical", "model", "posterior"], default="empirical")
     args = parser.parse_args(argv)
     try:
         if args.command == "capabilities":
