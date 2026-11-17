@@ -157,10 +157,16 @@ def model_for(request):
     else:
         model = SingleTaskGP(**kwargs)
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
+    from botorch.exceptions.errors import ModelFittingError
+
     with warnings.catch_warnings(record=True) as caught:
-        fit_gpytorch_mll(
-            mll, optimizer_kwargs={"options": {"maxiter": c.get("fit_maxiter", 50)}}, max_attempts=1
-        )
+        try:
+            fit_gpytorch_mll(
+                mll, optimizer_kwargs={"options": {"maxiter": c.get("fit_maxiter", 50)}}, max_attempts=1
+            )
+        except (ModelFittingError, RuntimeError, ValueError) as exc:
+            # A typed failure, never a silent fallback to another design.
+            raise Error("model_fit_failed", f"GP hyperparameter fit failed: {str(exc)[:1024]}") from exc
     return model, x, data, [str(w.message)[:512] for w in caught]
 
 

@@ -15,11 +15,28 @@ def propose(request):
     return bo_mcp(request, service)
 
 
+def vizier_point(problem, parameters):
+    """A Vizier suggestion as a point of the problem's declared types.
+
+    Vizier reports values as floats or strings; an integer parameter's value
+    must be integral, and is returned as an int.
+    """
+    point = {}
+    for v in problem["parameters"]:
+        value = parameters[v["name"]]
+        value = getattr(value, "value", value)
+        if v["type"] == "integer":
+            require(
+                isinstance(value, (int, float)) and float(value).is_integer(),
+                "backend_protocol",
+                f"non-integral value for integer parameter {v['name']}",
+            )
+            value = int(value)
+        point[v["name"]] = value
+    return point
+
+
 def vizier(request, service):
-    try:
-        from vizier.service import clients
-    except ImportError as exc:
-        raise Error("missing_dependency", "install bo-craft[vizier]") from exc
     p = request["problem"]
     require(
         not p.get("constraints") and not p.get("fidelity") and not p.get("input_constraints"),
@@ -31,6 +48,10 @@ def vizier(request, service):
         "unsupported_combination",
         "conditional Vizier designer support is not validated",
     )
+    try:
+        from vizier.service import clients
+    except ImportError as exc:
+        raise Error("missing_dependency", "install bo-craft[vizier]") from exc
     # This changes Vizier's process-global environment: use an isolated proposal
     # process, as experiment-craft does; no concurrent endpoints in one process.
     clients.environment_variables.server_endpoint = service["endpoint"]
@@ -84,7 +105,7 @@ def vizier(request, service):
     # Vizier reuses outstanding trials for a client_id, making lost-ack reads
     # reconcilable. Never complete the returned trials inside a proposal call.
     trials = study.suggest(count=request["q"], client_id=digest(request))
-    points = [{k: getattr(v, "value", v) for k, v in t.parameters.items()} for t in trials]
+    points = [vizier_point(p, t.parameters) for t in trials]
     return points, {
         "study": study_id,
         "trial_ids": [t.id for t in trials],

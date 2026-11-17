@@ -33,13 +33,16 @@ def main(argv=None):
                 save(args.output, value)
         print(canonical(value).decode())
         return 0
-    except (Error, OSError, RuntimeError, ValueError) as exc:
-        print(
-            canonical(
-                {"error": {"code": getattr(exc, "code", "numerical_failure"), "message": str(exc)[:2048]}}
-            ).decode(),
-            file=sys.stderr,
-        )
+    except (Error, ImportError, OSError, RuntimeError, ValueError) as exc:
+        if isinstance(exc, Error):
+            code = exc.code
+        elif isinstance(exc, ImportError):
+            code = "missing_dependency"
+        elif isinstance(exc, OSError):
+            code = "io_error"
+        else:
+            code = "numerical_failure"
+        print(canonical({"error": {"code": code, "message": str(exc)[:2048]}}).decode(), file=sys.stderr)
         return 2
 
 

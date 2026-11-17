@@ -39,7 +39,11 @@ def should_prune(
         direction=direction, pruner=pruner, sampler=optuna.samplers.RandomSampler(seed=seed)
     )
     for row in completed:
-        require(row, "invalid_observation", "empty completed learning curve")
+        require(
+            row and all(type(k) is int and k >= 0 for k in row),
+            "invalid_observation",
+            "completed learning curves need nonnegative integer steps",
+        )
         study.add_trial(create_trial(value=row[max(row)], intermediate_values=row))
     trial = study.ask()
     for step, value in sorted(intermediate.items()):
