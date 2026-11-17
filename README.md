@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dietmarwo/BO-craft/main/docs/images/bo-craft.png" alt="BO-craft: adaptive experiment design with BoTorch and Optuna workflows">
+</p>
+
 # BO-craft
 
 Typed Bayesian optimization proposals for expensive experiments, integrated with experiment-craft and optimization-jobs. This is an experimental source release, not a published package or hosted service.
