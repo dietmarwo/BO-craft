@@ -18,7 +18,16 @@ Experimental 0.1.0 source; nothing is tagged or published.
 - Proposals may declare `replicate_of`. A repeated point is accepted only as a declared replicate of a completed observation.
 - Model diagnostics in every model proposal: lengthscales, noise variance and exact leave-one-out residuals, with warnings.
 - Pilots on development seeds (no gates): outcome transforms cut Rosenbrock-8 regret about 20-fold; the model answer halved the noisy Branin–Currin hypervolume regret; the trust region gave no gain on Ackley-20.
-- [Pruning and service adapters](docs/pruning-and-services.md): why pruning is not wired and why a campaign-scoped Vizier study is not built, and what each would need.
+- [Pruning and service adapters](docs/pruning-and-services.md): how pruning and the campaign-scoped Vizier study work, and what was measured.
+- Learning curves and pruning:
+  - `bo_craft.pruning.median_decision`, Optuna's median rule without Optuna (checked against `MedianPruner` on 150 random cases);
+  - observations may carry `intermediate` (step → value; completed or pruned, single objective);
+  - `config.pruned` (BoTorch): `ignore` (default) or `last`, which trains on a pruned trial's last value. TPE receives pruned trials with their curves.
+  - experiment-craft prunes live through optimization-jobs' new progress files.
+  - Gates G7a/G7b failed on simulated Hartmann-6 learning curves at equal time: 0.98 [0.91, 1.05] × the time to target, 0.76 [0.43, 1.29] × the regret. Pruning stays opt-in.
+- The multifidelity comparison at equal cost (`benchmarks/mf_panel.py`; `branin_mf` and `branin_mf_misleading` in `benchmarks/problems.py`). Gate G6 failed: the knowledge gradient spent every evaluation after the initial design below the target fidelity, and its posterior regret was 10.1 [4.8, 21.7] × target-only BO's. 6 of 30 runs failed numerically. The adapter stays experimental and is not recommended.
+- `benchmarks/pruning_sim.py`: pruning at equal total evaluation time on Hartmann-6 learning curves.
+- A `vizier` CI job runs `tests/test_vizier.py` against a real local Vizier server.
 - Added strict scientific contracts, BoTorch GP/constraint/multiobjective/multifidelity proposals, Optuna mixed/conditional TPE, empirical and scalar posterior recommendations, replication and pruning utilities.
 - Added optional Vizier study projections and an explicitly read-only BO-MCP import bridge.
 - Added real runtime campaign examples, bounded numerical tests, retained confirmation data and architecture/user documentation.
@@ -26,6 +35,8 @@ Experimental 0.1.0 source; nothing is tagged or published.
 
 ### Changed
 
+- Vizier: one study per campaign instead of one per request. Observations are imported once, by ID and digest. A returned suggestion is completed by its observation, and failed or abandoned suggestions are withdrawn. Diagnostics report the reconciliation counts. 50 proposals against a real local server import each observation once.
+- The BoTorch backend retries an acquisition whose optimizer fails with NaN gradients at most twice, rebuilt with fresh Monte Carlo samples and restarts; `acquisition_attempts` records the attempts. Proposals that do not fail are unchanged (a recorded cell reproduced exactly).
 - Training selection keeps the best quarter of `training_cap` plus the latest observations, instead of only the latest. Below the cap nothing changes.
 - Acquisition defaults stay 4 restarts, 128 raw samples and 50 iterations. Rule D1 of the protocol found no larger setting within 5% of the best in every stratum.
 - The BoTorch backend refuses only conditional spaces now, not integer or categorical ones.

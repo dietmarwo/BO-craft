@@ -114,7 +114,9 @@ Input constraints are exact linear physical-space filters for supported active n
 
 For multiple objectives supply a raw-unit reference point before the comparison. Keep directions, normalization and reference point fixed. `recommend` reports empirical feasible nondominated observations; noisy posterior fronts need fresh-set validation.
 
-Multifidelity KG is an experimental scalar, continuous, synchronous adapter. Declare normalized-fidelity cost intercept/weight and the raw target fidelity. It currently rejects constraints and pending evaluations. Compare against target-fidelity-only optimization at equal total cost. A low-fidelity value is not a target-fidelity answer.
+Multifidelity KG is an experimental scalar, continuous, synchronous adapter. Declare normalized-fidelity cost intercept/weight and the raw target fidelity. It currently rejects constraints and pending evaluations. A low-fidelity value is not a target-fidelity answer.
+
+**Prefer target-fidelity BO.** In the confirmation of 17 November (gate G6), at a cost of 0.25 + 0.75 s on augmented Branin, the knowledge gradient spent every evaluation after the initial design below the target fidelity. Its posterior regret was 10.1 [4.8, 21.7] times that of target-only BO at equal cost, and 6 of 30 runs failed numerically. Use it only after comparing it with target-only optimization at equal cost on your own problem. Use inferred noise: with `noise: deterministic` the multifidelity GP failed numerically.
 
 ## Optional adapters and reproducibility
 

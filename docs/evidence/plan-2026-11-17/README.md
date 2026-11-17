@@ -204,3 +204,43 @@ Before this protocol was written, one smoke run per arm on seed 99 (outside ever
 - G7b: regret ratio with an upper bound of at most 1.05.
 
 **Consequence:** if both pass, experiment-craft's guide reports pruning as measured to save time on learning curves; otherwise it reports the result and pruning stays opt-in. Either way, the runner-backed integration test checks that pruning cancels jobs and that the runtime records the cancellation.
+
+## Part 2 results
+
+### G6 (`mf-confirm`, seeds 501–530, 120 cells, 12 failed)
+
+| Problem | Arm | Completed | Evaluations (target fidelity) | Posterior regret, median | Geometric mean | Best target observation, median |
+|---|---|---:|---:|---:|---:|---:|
+| `branin_mf` | target-only | 30 | 12 (12) | 0.573 | 0.463 | 0.800 |
+| `branin_mf` | `mf-kg` | 24 | 31.1 (4) | 5.54 | 3.48 | 6.61 |
+| `branin_mf_misleading` | target-only | 30 | 12 (12) | 0.573 | 0.463 | 0.800 |
+| `branin_mf_misleading` | `mf-kg` | 24 | 30.8 (4) | 14.6 | 12.0 | 7.55 |
+
+The target-only arm is the same on both problems, because they agree at s = 1.
+
+**G6 fails clearly.** On `branin_mf`, the knowledge gradient's posterior regret is 10.1 [4.8, 21.7] times target-only BO's: worse in 22 of 24 completed pairs and better in 2.
+
+Two failure modes explain it:
+- **It never paid for the target fidelity.** After the 4 shared initial points, all of its about 27 evaluations were below the target fidelity. The median run's mean fidelity was 0.055, and the highest of all was 0.999. At a cost of 0.25 + 0.75 s, a point near s = 0 costs a quarter of a target evaluation, and the cost-weighted knowledge gradient preferred it every time. The model's target-fidelity predictions stayed poor, and the best target observation is one of the 4 initial points.
+- **6 of 30 runs failed numerically on each problem.** The errors were a NaN probability tensor while sampling initial conditions, a covariance that was not positive definite, and one failed hyperparameter fit. The retry covers only NaN gradients during acquisition optimization. Target-only BO completed all 60 runs.
+
+On the misleading problem, reported but not gated, the posterior regret ratio is 33 [16, 68], as expected when the cheap fidelities point to the wrong minima.
+
+**Consequence, as declared:** the adapter stays experimental. The docs report this result and advise against it at this cost ratio. A cost model with a larger fixed cost per evaluation, as in BoTorch's tutorial, or a cap on low-fidelity evaluations was not tested.
+
+### G7 (`pruning-confirm`, seeds 501–530, 120 cells, none failed)
+
+| Arm | Trials (mean) | Pruned (mean) | Time to regret ≤ 0.1, median | Censored at 400 | Final regret, median | Geometric mean |
+|---|---:|---:|---:|---:|---:|---:|
+| BoTorch, no pruning | 40 | 0 | 345 | 10 | 0.0313 | 0.0414 |
+| BoTorch, median pruning | 54.0 | 18.6 | 308.5 | 12 | 0.0256 | 0.0313 |
+| TPE, no pruning | 40 | 0 | 400 | 30 | 0.669 | 0.591 |
+| TPE, median pruning | 48.2 | 11.0 | 400 | 30 | 0.481 | 0.455 |
+
+Paired ratios of BoTorch with pruning against BoTorch without, with 95% bootstrap intervals:
+- **G7a fails:** time to target 0.98 [0.91, 1.05], pruning faster in 10 seeds and slower in 12. A censored run counts as 400.
+- **G7b fails:** final regret 0.76 [0.43, 1.29], better in 16 seeds and worse in 14.
+
+Pruning stopped about a third of the trials and so ran 35% more of them in the same time, but the time to the target did not shorten measurably, and the regret interval is too wide to exclude a loss. Neither TPE arm reached the target in any seed.
+
+**Consequence, as declared:** pruning stays opt-in. experiment-craft's guide reports this result, and the runner-backed integration test checks that pruning cancels jobs and that the runtime records the cancellation.
