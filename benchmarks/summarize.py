@@ -11,6 +11,7 @@ seed 0). Regrets are floored at 1e-9 times the problem's scale.
 """
 
 import argparse
+import gzip
 import json
 import math
 import random
@@ -24,12 +25,25 @@ import panel
 import problems
 
 
-def load(directories):
+def load(sources):
+    """Cells from run directories (one JSON per cell) or packed `.jsonl.gz` evidence files."""
     cells = []
-    for directory in directories:
-        for path in sorted(Path(directory).glob("*.json")):
-            cells.append(json.loads(path.read_text()))
+    for source in map(Path, sources):
+        if source.suffix == ".gz":
+            with gzip.open(source, "rt") as stream:
+                cells += [json.loads(line) for line in stream if line.strip()]
+        else:
+            cells += [json.loads(path.read_text()) for path in sorted(source.glob("*.json"))]
     return cells
+
+
+def pack(cells, destination):
+    """Cells sorted by identity into a reproducible gzip file (no timestamp)."""
+    rows = sorted(cells, key=lambda c: json.dumps(c["cell"], sort_keys=True))
+    data = "".join(json.dumps(c, sort_keys=True, separators=(",", ":")) + "\n" for c in rows).encode()
+    with open(destination, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as stream:
+        stream.write(data)
+    return {"packed": len(rows), "file": str(destination)}
 
 
 def stratum(cell):
@@ -83,7 +97,11 @@ def ratio(cells, a, b, key):
 
 
 def gate(protocol, name, cells):
-    spec = protocol["gates"][name]
+    spec = dict(protocol["gates"][name])
+    chosen = protocol.get("async", {}).get("chosen")
+    for side in ("a", "b"):
+        if chosen is not None:
+            spec[side] = spec[side].replace("lookahead-chosen", f"lookahead-{chosen}")
     keys = sorted({stratum(c) for c in cells if c["cell"]["set"] == spec["set"]})
     if spec.get("strata"):
         keys = [k for k in keys if [k[0], k[1]] in spec["strata"]]
@@ -97,7 +115,12 @@ def gate(protocol, name, cells):
         else:
             ok = r["high"] <= 1.05 and r["missing"] == 0
         passed &= ok
-        rows.append({"stratum": list(key), **r, "pass": ok})
+        row = {"stratum": list(key), **r, "pass": ok}
+        if spec["set"] == "async":
+            arm_a, arm_b = spec["a"].split(":")[0], spec["b"].split(":")[0]
+            same = [c for c in cells if c["cell"]["set"] == spec["set"]]
+            row["makespan"] = ratio(same, f"{arm_a}:makespan", f"{arm_b}:makespan", key)
+        rows.append(row)
     return {
         "gate": name,
         "a": spec["a"],
@@ -166,9 +189,13 @@ def main():
     parser.add_argument("--gate")
     parser.add_argument("--table")
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--pack", help="write the loaded cells to this .jsonl.gz file")
     parser.add_argument("directories", nargs="+")
     args = parser.parse_args()
     cells = load(args.directories)
+    if args.pack:
+        print(json.dumps(pack(cells, args.pack)))
+        return
     if args.verify:
         print(json.dumps(verify(cells)))
         return

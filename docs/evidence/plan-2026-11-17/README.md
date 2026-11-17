@@ -66,6 +66,19 @@ Median model-rule regret:
 
 - **Pilots without gates:** `mixed-dev` (sanity), `tr-pilot` (trust region, Ackley-20), `mo-pilot` (Branin–Currin), `transform-pilot` (Rosenbrock-8). Their capabilities stay experimental.
 
+### Development of the mixed spaces (sanity, seeds 0–9, 120 cells, none failed)
+
+Median empirical regret, with the median proposal seconds per run in brackets:
+
+| Stratum | TPE | BoTorch mixed | Optuna GP |
+|---|---:|---:|---:|
+| integer Hartmann-6, noise 0, 50 calls | 0.475 (0.4) | 0.141 (30) | 0.137 (7.7) |
+| integer Hartmann-6, noise 0.1, 50 calls | 0.428 (0.3) | 0.156 (32) | 0.145 (7.4) |
+| categorical Branin, noise 0, 30 calls | 1.35 (0.2) | 0.597 (23) | 1.10 (4.1) |
+| categorical Branin, noise 0.1, 30 calls | 2.59 (0.2) | 3.17 (29) | 1.63 (4.2) |
+
+No rule depends on this set. It checks that both GP routes run on every stratum before the confirmation.
+
 ## Confirmation (fresh seeds 501–530) and its gates
 
 | Gate | Comparison | Strata | Pass if |
@@ -85,3 +98,42 @@ A gate also fails if any of its cells failed or was censored.
 - **G4:** replication stays opt-in. A pass is reported as a measured benefit in high noise; a fail as a negative result.
 
 Asynchronous look-ahead (plan Phase 4) has its own protocol in [`async.md`](async.md).
+
+## Confirmation results
+
+### G1 and G2 (`phase1-confirm`, seeds 501–530, 300 cells, none failed)
+
+| Stratum | 0.1.0, empirical | this branch, empirical | this branch, model | Model vs empirical (G1) | This branch vs 0.1.0 (G2) |
+|---|---:|---:|---:|---|---|
+| Branin, noise 0, 30 calls | 0.00143 | 0.00143 | 0.00329 | — | 1 [1, 1] |
+| Branin, noise 0.1, 30 calls | 1.141 | 1.141 | 1.100 | 1.34 [0.89, 2.10], 9 better / 14 worse | 1 [1, 1] |
+| constrained Branin, noise 0.1, 30 calls | 1.463 | 1.463 | 0.809 | 0.64 [0.40, 1.04], 18 / 5 | 1 [1, 1] |
+| Hartmann-6, noise 0, 60 calls | 0.00143 | 0.00143 | 0.00152 | — | 1 [1, 1] |
+| Hartmann-6, noise 0.1, 60 calls | 0.0256 | 0.0256 | 0.0222 | 0.97 [0.84, 1.11], 11 / 10 | 1 [1, 1] |
+
+The first three value columns are median latent regrets. The ratios are paired geometric means with 95% bootstrap intervals.
+
+**G1 fails.**
+- The model recommendation is not reliably better than the best noisy observation in any noisy stratum.
+- It is better in 18 of 30 seeds on constrained Branin, but that interval reaches 1.04. It is worse in the point estimate on plain Branin.
+- The plan's 5-seed Hartmann-6 pilot used a noise standard deviation of 0.1, about 0.26 of the scale, against 0.038 here. It suggested a larger gain than this confirmation shows.
+- **Consequence:** `--kind model` stays available and documented with this result; it is not recommended as the default answer. Campaigns record both answers, and their validation replicates use the empirical choice unless asked otherwise.
+
+**G2 passes with exact equality.**
+- With the defaults kept by D1 and fewer observations than `training_cap`, this branch makes the same proposals as 0.1.0, cell for cell.
+- The training rule only differs above the cap, and the acquisition defaults are unchanged.
+
+### G3a and G3b (`mixed-confirm`, seeds 501–530, 360 cells, none failed)
+
+Median empirical regret, with the median proposal seconds per run in brackets, and the paired ratio against TPE:
+
+| Stratum | TPE | BoTorch mixed | vs TPE (G3a) | Optuna GP | vs TPE (G3b) |
+|---|---:|---:|---|---:|---|
+| integer Hartmann-6, noise 0, 50 calls | 0.355 (0.4) | 0.140 (28) | 0.048 [0.014, 0.15], 25 / 5 | 0.00197 (7.6) | 0.014 [0.004, 0.048], 26 / 4 |
+| integer Hartmann-6, noise 0.1, 50 calls | 0.509 (0.3) | 0.030 (33) | 0.079 [0.040, 0.15], 27 / 3 | 0.153 (7.9) | 0.24 [0.13, 0.46], 22 / 8 |
+| categorical Branin, noise 0, 30 calls | 1.219 (0.2) | 0.529 (24) | 0.20 [0.088, 0.42], 24 / 4 | 0.674 (4.1) | 0.41 [0.25, 0.65], 23 / 6 |
+| categorical Branin, noise 0.1, 30 calls | 2.995 (0.2) | 4.113 (29) | 0.98 [0.63, 1.48], 15 / 14 | 3.438 (4.1) | 1.08 [0.72, 1.64], 13 / 16 |
+
+**Both gates fail**, because of the noisy categorical Branin stratum. There, neither GP route is distinguishable from TPE; their medians are worse and their geometric means are level. In the other three strata, both routes are far ahead of TPE: 2.4 to 73 times lower regret (geometric means), with intervals well below 1.
+
+**Consequence, as declared:** TPE stays the documented default for mixed spaces. Both GP routes are documented as experimental, with this table. The data suggest choosing a GP route when integer or categorical parameters come with little noise. Under noise and a categorical choice, neither GP route is better than TPE here.

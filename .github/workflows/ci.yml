@@ -18,6 +18,14 @@ jobs:
         run: |
           python benchmarks/verify_evidence.py
           python benchmarks/campaign.py --output "$RUNNER_TEMP/smoke" --seeds 1
+      - name: Benchmark protocol of 17 November - recorded scores and a panel smoke
+        run: |
+          python benchmarks/summarize.py --verify docs/evidence/plan-2026-11-17/*.jsonl.gz
+          for arm in botorch optuna-gp; do
+            python benchmarks/panel.py cell --protocol benchmarks/protocol-2026-11-17.json --set mixed-dev \
+              --problem branin_cat --noise 0.1 --budget 12 --arm "$arm" --seed 0 > "$RUNNER_TEMP/$arm.json"
+            python -c "import json, sys; r = json.load(open(sys.argv[1])); assert r['status'] == 'completed', r; assert r['rules']['model']['regret'] is not None" "$RUNNER_TEMP/$arm.json"
+          done
       - run: python -m build
       - name: A minimal install imports neither Torch nor Optuna
         run: |

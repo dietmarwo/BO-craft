@@ -28,3 +28,15 @@ Committed before any run. `benchmarks/async_sim.py` replays experiment-craft's d
 - Only L = 0 qualifies; L = 1's median regret is 1.16 × legacy's. So L = 0 is chosen as `lookahead-chosen`.
 - It is slower: every candidate waits for a proposal computed with the latest observations.
 - G5 is confirmed on seeds 501–530.
+
+## G5 result (confirmation, seeds 501–530, 60 runs, none failed)
+
+| Policy | Median model-rule regret | Median empirical regret | Median makespan (s) |
+|---|---:|---:|---:|
+| legacy | 0.426 | 0.426 | 130.6 |
+| L = 0 | 0.214 | 0.214 | 160.2 |
+
+- Paired ratio of model-rule regret, L = 0 against legacy: **0.42 [0.28, 0.64]**. L = 0 was better in 24 of 30 seeds. G5 (upper bound at most 1.05) **passes**, and the interval lies wholly below 1.
+- Makespan ratio: 1.23 [1.22, 1.24]. Waiting for proposals with the latest observations makes this modelled campaign 23% longer.
+- **Consequence:** experiment-craft's guide recommends `proposal_lookahead: 0` when evaluations are scarcer than wall time. Without the key, the original rule still applies.
+- **Scope:** one problem, four slots, a modelled clock (lognormal durations with median 10 s, 2.8 s per proposal job). With shorter evaluations, the start-up cost weighs more.

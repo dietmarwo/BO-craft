@@ -2,7 +2,7 @@
 
 Typed Bayesian optimization proposals for expensive experiments, integrated with experiment-craft and optimization-jobs. This is an experimental source release, not a published package or hosted service.
 
-BoTorch supplies noisy continuous, constrained, multiobjective and bounded scalar multifidelity models. Optuna supplies mixed/conditional TPE. A tested optional Vizier adapter uses request-scoped study projections. An experimental read-only BO-MCP bridge can import pre-generated suggestions; it does not generate or synchronize campaigns automatically.
+BoTorch supplies noisy continuous and mixed (integer, categorical) models, constraints, several objectives and bounded scalar multifidelity. Optuna supplies TPE for mixed and conditional spaces, and a GP sampler for unconditional ones. Recommendations are empirical (best observed), model-based (the observed point the fitted GP ranks best) or posterior predictions. A tested optional Vizier adapter uses request-scoped study projections. An experimental read-only BO-MCP bridge can import pre-generated suggestions; it does not generate or synchronize campaigns automatically.
 
 | Layer | Owner |
 |---|---|
@@ -11,7 +11,7 @@ BoTorch supplies noisy continuous, constrained, multiobjective and bounded scala
 | Trusted execution, CPU admission, cancellation and artifacts | optimization-jobs |
 | Physical model, units, metric and fidelity meanings | Application repository |
 
-The existing native fcmaes-surrogate remains the lightweight deterministic baseline. BO-craft does not make it a Python dependency or change its job profile.
+The existing native fcmaes-surrogate remains the lightweight deterministic baseline, and the better choice for deterministic continuous boxes: in fcmaes-rust's comparison it reaches far lower regret at a fraction of the proposal time. BO-craft does not make it a Python dependency or change its job profile. The [user manual](docs/user-manual.md#choose-a-method) has a chooser with the measured evidence.
 
 ## Install from this source
 
@@ -25,7 +25,7 @@ bo-craft capabilities
 
 A minimal `pip install .` installs the JSON contracts and CLI without importing Torch. Choose optional backends explicitly. For a reproducible numerical environment use requirements-tested.txt; Vizier's tested compatibility pins are separate because the current upstream unconstrained dependency resolution was incompatible.
 
-See [user manual](docs/user-manual.md), [architecture](docs/architecture.md), [capabilities and limits](docs/capabilities.md), [measured evidence](docs/evidence/README.md), and [agent guide](ai-context.md). The complete implementation program is in docs/plans. CI covers CPU numerical tests and package build. No GPU or production fleet claim is made.
+See [user manual](docs/user-manual.md), [architecture](docs/architecture.md), [capabilities and limits](docs/capabilities.md), [measured evidence](docs/evidence/README.md) and the [benchmarks of 17 November](docs/evidence/plan-2026-11-17/README.md), and the [agent guide](ai-context.md). Plans are in docs/plans. CI covers CPU numerical tests and package build. No GPU or production fleet claim is made.
 
 ## Local library use
 
