@@ -32,7 +32,38 @@ results changes after a run starts.
   - A setting qualifies if its median is at most 1.05 × the best setting's median in every stratum.
   - The qualifying setting with the lowest total median proposal time becomes the default.
   - *Amendment, committed while `acq-dev` was running and before its final table:* if no setting qualifies, s0 (0.1.0's settings) stays the default.
+### D1 result (development, seeds 0–9, 120 cells, none failed)
+
+Median model-rule regret:
+
+| Stratum | s0 (4, 128, 50) | s1 (8, 256, 100) | s2 (10, 512, 200) |
+|---|---:|---:|---:|
+| branin, noise 0, 30 calls | 0.00107 | 0.00283 | 0.00186 |
+| branin, noise 0.1, 30 calls | 1.49 | 2.03 | 1.6 |
+| hartmann6, noise 0, 60 calls | 0.00219 | 0.00106 | 0.0021 |
+| hartmann6, noise 0.1, 60 calls | 0.0739 | 0.0269 | 0.0327 |
+| Sum of median proposal seconds per run | 71 | 124 | 175 |
+
+- No setting is within 5% of the best median in every stratum. s0 is best on both Branin strata, s1 on both Hartmann-6 strata (on the noisy one by a factor of 2.7 over s0), and s2 nowhere.
+- By the amendment, s0, 0.1.0's settings, stays the default. `acq_maxiter` defaults to 50, the value `fit_maxiter` used to impose on the acquisition.
+- With ten seeds the medians are noisy. The larger settings cost 1.7× and 2.5× the proposal time, without a gain in every stratum.
+
 - **D2, replication threshold (`replication-dev`).** τ ∈ {0.5, 1.0}: the threshold with the lower geometric mean, over the strata, of median model-rule regret becomes `botorch-rep`, before any confirmation run.
+### D2 result (development, seeds 0–9, 60 cells, none failed)
+
+| Stratum | none: median model regret | τ = 0.5 | τ = 1.0 | replicates proposed (τ = 0.5 / 1.0) |
+|---|---:|---:|---:|---:|
+| Branin, noise 0.3, 30 calls | 3.01 | 2.46 | 3.01 | 91 / 0 |
+| Hartmann-6, noise 0.3, 60 calls | 0.120 | 0.194 | 0.120 | 218 / 0 |
+
+- The rule selects τ = 1.0 (geometric mean 0.601 against 0.691), so `botorch-rep` uses τ = 1.0.
+- τ = 1.0 never replicated, and it cannot: the posterior variance of the latent function at an observed point is below the noise variance even with that observation alone, and more data only lowers it. At τ ≥ 1 the policy is identical to no replication.
+- **G4 is therefore not run.** Its two arms would be identical, giving a ratio of exactly 1, so G4 is recorded as **failed**.
+- **Consequences:**
+  - Replication stays opt-in and experimental, with τ = 0.5 as its default.
+  - The request schema now refuses `replication_threshold` ≥ 1.
+  - The development data for τ = 0.5 are mixed: better on Branin, worse on Hartmann-6.
+
 - **Pilots without gates:** `mixed-dev` (sanity), `tr-pilot` (trust region, Ackley-20), `mo-pilot` (Branin–Currin), `transform-pilot` (Rosenbrock-8). Their capabilities stay experimental.
 
 ## Confirmation (fresh seeds 501–530) and its gates

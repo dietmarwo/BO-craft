@@ -490,7 +490,7 @@
         "replication_threshold": {
           "type": "number",
           "minimum": 0.05,
-          "maximum": 10
+          "exclusiveMaximum": 1
         },
         "max_replicates": {
           "type": "integer",

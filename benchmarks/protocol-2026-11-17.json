@@ -90,6 +90,14 @@
     "backend": "botorch",
     "outcome_transform": "bilog"
    }
+  },
+  "botorch-rep": {
+   "config": {
+    "backend": "botorch",
+    "replication": "incumbent",
+    "replication_threshold": 1.0
+   },
+   "note": "chosen by rule D2 in replication-dev"
   }
  },
  "sets": {
@@ -380,7 +388,8 @@
    "set": "replication-confirm",
    "a": "botorch-rep:model",
    "b": "botorch:model",
-   "criterion": "upper<1"
+   "criterion": "upper<1",
+   "status": "not run: the chosen threshold 1.0 never replicates (see README, D2), so both arms are identical; recorded as failed"
   },
   "G5-lookahead": {
    "set": "async",
@@ -390,9 +399,7 @@
    "note": "lookahead-chosen is the policy chosen by rule D3 in async-dev; seeds 501-530"
   }
  },
- "pending": {
-  "botorch-rep": "defined after replication-dev by rule D2, before any confirmation run"
- },
+ "pending": {},
  "async": {
   "dev_seeds": "0-9",
   "confirm_seeds": "501-530",
