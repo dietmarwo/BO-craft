@@ -43,7 +43,7 @@ print(result["candidates"])
 
 The caller executes candidates and supplies typed observations. Results include request/problem digests, exact history/pending IDs, resolved diagnostics and package versions. No arbitrary code is carried in the request.
 
-For a real admitted campaign, install the companion experiment-craft patch and run:
+For a real admitted campaign, install [experiment-craft](https://github.com/dietmarwo/experiment-craft), whose [adaptive campaigns](https://github.com/dietmarwo/experiment-craft/blob/main/docs/adaptive-bo.md) call this package, into the same environment and run:
 
 ```bash
 python examples/adaptive_campaign.py --runner /absolute/optimization-run \

@@ -27,7 +27,7 @@ Check capabilities and typed errors. Unsupported mixed BoTorch spaces, missing h
 
 ## Adaptive campaigns
 
-Apply the companion experiment-craft patch and install that source. Start with examples/adaptive_campaign.py, then edit a copy of its manifest. The manifest separates the proposal Python executable/slot/time reservation, evaluator template, scientific evaluation count, concurrency, job count, declared slot-seconds and absolute campaign deadline.
+Install [experiment-craft](https://github.com/dietmarwo/experiment-craft) and this package into one environment; its [adaptive campaigns](https://github.com/dietmarwo/experiment-craft/blob/main/docs/adaptive-bo.md) name the BO-craft revision they are tested with. Start with examples/adaptive_campaign.py, then edit a copy of its manifest. The manifest separates the proposal Python executable/slot/time reservation, evaluator template, scientific evaluation count, concurrency, job count, declared slot-seconds and absolute campaign deadline.
 
 ```bash
 experiment-craft adaptive-init campaign.json --workspace /absolute/new/campaign \

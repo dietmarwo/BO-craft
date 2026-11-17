@@ -1,6 +1,6 @@
 # Agent entry point for BO-craft
 
-Read README.md, docs/capabilities.md and docs/user-manual.md before proposing a run. This source package is experimental and may not be installed or published. Inspect `bo-craft capabilities` and the JSON schemas; do not invent options.
+Read README.md, docs/capabilities.md and docs/user-manual.md before proposing a run. This package is experimental and not published to a package index; install it from this repository. Inspect `bo-craft capabilities` and the JSON schemas; do not invent options.
 
 Use BoTorch for supported expensive continuous noisy/constraint/multiobjective experiments, Optuna TPE for supported mixed/conditional domains, and keep the native fcmaes surrogate as the low-overhead deterministic baseline. Preserve the scientific target, seed/replicate protocol, units, constraints and resource budget. Compare methods with total elapsed/evaluation cost, retaining failures.
 

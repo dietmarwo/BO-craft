@@ -1,6 +1,6 @@
 # Capability and acceptance matrix
 
-| Feature | State in this source delivery | Evidence / boundary |
+| Feature | State | Evidence / boundary |
 |---|---|---|
 | Strict JSON/problem/observation contracts | Implemented | Finite/bounds/variance/identity rejection tests |
 | Noisy scalar BoTorch | Implemented, experimental integration | Known/inferred modes; 30-seed synthetic panels |
