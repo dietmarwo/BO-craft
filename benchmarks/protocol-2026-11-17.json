@@ -408,6 +408,7 @@
    "0",
    "1"
   ],
-  "script": "benchmarks/async_sim.py"
+  "script": "benchmarks/async_sim.py",
+  "chosen": "0"
  }
 }

@@ -16,3 +16,15 @@ Committed before any run. `benchmarks/async_sim.py` replays experiment-craft's d
 **G5, confirmation (seeds 501–530).** The chosen policy against legacy must give a model-rule regret ratio with an upper bound of at most 1.05. The makespan ratio is reported.
 
 **Consequence.** experiment-craft keeps the legacy rule when `proposal_lookahead` is absent. If G5 passes, its guide recommends the chosen value.
+
+## D3 result (development, seeds 0–9, 30 runs, none failed)
+
+| Policy | Median model-rule regret | Median empirical regret | Median makespan (s) |
+|---|---:|---:|---:|
+| legacy | 0.372 | 0.372 | 117.7 |
+| L = 0 | 0.237 | 0.237 | 147.7 |
+| L = 1 | 0.430 | 0.440 | 127.6 |
+
+- Only L = 0 qualifies; L = 1's median regret is 1.16 × legacy's. So L = 0 is chosen as `lookahead-chosen`.
+- It is slower: every candidate waits for a proposal computed with the latest observations.
+- G5 is confirmed on seeds 501–530.
