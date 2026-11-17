@@ -156,6 +156,12 @@ def validate(request):
             "unsupported_combination",
             "replication: scalar noisy problems without fidelity only",
         )
+    if c.get("pruned", "ignore") == "last":
+        require(
+            scalar and not p.get("constraints") and not p.get("fidelity"),
+            "unsupported_combination",
+            "pruned: last needs a scalar unconstrained problem without fidelity",
+        )
     if c.get("outcome_transform", "standardize") != "standardize":
         require(
             not p.get("fidelity"),
@@ -236,6 +242,14 @@ def fit_model(problem, observations, config, seed):
     torch.manual_seed(seed)
     space = Space(problem)
     data = [o for o in observations if o["status"] == "completed"]
+    if config.get("pruned", "ignore") == "last":
+        # A pruned trial's last reported value, a pessimistic value for a curve
+        # that improves with steps, so the model learns where pruning happened.
+        name = problem["objectives"][0]["name"]
+        for o in observations:
+            if o["status"] == "pruned" and o.get("intermediate"):
+                last = max(o["intermediate"], key=int)
+                data.append({**o, "status": "completed", "values": {name: o["intermediate"][last]}})
     require(len(data) >= 2, "no_observations", "a model needs two completed observations")
     data, rule = select_training(problem, data, setting(config, "training_cap"))
     objectives = problem["objectives"]
@@ -736,43 +750,65 @@ def propose(request):
             "restarts": restarts,
             "center_id": center_obs["id"],
         }
-    if expected == "log_nei":
-        acq = qLogNoisyExpectedImprovement(
-            **common, objective=GenericMCObjective(lambda z, X=None: z[..., 0]), prune_baseline=True
-        )
-    elif expected == "log_nehvi":
-        ref = [
-            v * (1 if m["direction"] == "maximize" else -1)
-            for m, v in zip(p["objectives"], c["reference_point"])
-        ]
-        if fit.transformed:
-            forward = TRANSFORMS[fit.transform][0]
+
+    def acquisition():
+        if expected == "log_nei":
+            return qLogNoisyExpectedImprovement(
+                **common, objective=GenericMCObjective(lambda z, X=None: z[..., 0]), prune_baseline=True
+            )
+        if expected == "log_nehvi":
             ref = [
-                (1 if m["direction"] == "maximize" else -1) * forward(v)
-                if m["name"] in fit.transformed
-                else r
-                for m, v, r in zip(p["objectives"], c["reference_point"], ref)
+                v * (1 if m["direction"] == "maximize" else -1)
+                for m, v in zip(p["objectives"], c["reference_point"])
             ]
-        acq = qLogNoisyExpectedHypervolumeImprovement(
-            **common,
-            ref_point=ref,
-            objective=IdentityMCMultiOutputObjective(outcomes=list(range(nobj))),
-            prune_baseline=True,
-        )
-    else:
-        acq = knowledge_gradient(model, p, c, space)
-    try:
-        points, value = optimize(
-            acq,
-            space,
-            bounds,
-            q_model,
-            c,
-            inequality=inequality_constraints(p),
-            sequential=expected != "multifidelity_kg",
-        )
-    except (RuntimeError, ValueError) as exc:
-        raise Error("numerical_failure", str(exc)[:1024]) from exc
+            if fit.transformed:
+                forward = TRANSFORMS[fit.transform][0]
+                ref = [
+                    (1 if m["direction"] == "maximize" else -1) * forward(v)
+                    if m["name"] in fit.transformed
+                    else r
+                    for m, v, r in zip(p["objectives"], c["reference_point"], ref)
+                ]
+            return qLogNoisyExpectedHypervolumeImprovement(
+                **common,
+                ref_point=ref,
+                objective=IdentityMCMultiOutputObjective(outcomes=list(range(nobj))),
+                prune_baseline=True,
+            )
+        return knowledge_gradient(model, p, c, space)
+
+    from botorch.exceptions.errors import OptimizationGradientError
+
+    # NaN gradients from one set of random restarts are retried with fresh
+    # restarts of the same acquisition (at most twice), and recorded.
+    for attempt in range(3):
+        if attempt:
+            # The first attempt keeps the random state of the fit, as before;
+            # a retry rebuilds the acquisition, whose MC or fantasy samples
+            # may be what produced the NaN gradients.
+            torch.manual_seed(request["seed"] + 7919 * attempt)
+            sampler = SobolQMCNormalSampler(
+                torch.Size([setting(c, "mc_samples")]), seed=request["seed"] + attempt
+            )
+            common["sampler"] = sampler
+        acq = acquisition()
+        try:
+            points, value = optimize(
+                acq,
+                space,
+                bounds,
+                q_model,
+                c,
+                inequality=inequality_constraints(p),
+                sequential=expected != "multifidelity_kg",
+            )
+            break
+        except OptimizationGradientError as exc:
+            if attempt == 2:
+                raise Error("numerical_failure", str(exc)[:1024]) from exc
+        except (RuntimeError, ValueError) as exc:
+            raise Error("numerical_failure", str(exc)[:1024]) from exc
+    diagnostic["acquisition_attempts"] = attempt + 1
     candidates += [space.decode(row.tolist()) for row in points.detach()]
     diagnostic["acquisition_value"] = value.detach().reshape(-1).tolist() if value is not None else []
     if replicate_of:

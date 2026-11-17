@@ -170,7 +170,15 @@ def verify(cells):
             assert all(abs(latent[k] - v) <= 1e-9 * (1 + abs(v)) for k, v in o["latent"].items()), cell[
                 "cell"
             ]
-        empirical = panel.empirical(problem, cell["observations"])
+        # Answers are chosen among completed observations at the target fidelity.
+        fidelity = problem.get("fidelity")
+        usable = [
+            o
+            for o in cell["observations"]
+            if o["status"] == "completed"
+            and (not fidelity or o["x"].get(fidelity["parameter"], fidelity["target"]) == fidelity["target"])
+        ]
+        empirical = panel.empirical(problem, usable)
         assert cell["rules"]["empirical"]["points"] == empirical[:16], cell["cell"]
         for rule, value in cell["rules"].items():
             if "regret" in value:
