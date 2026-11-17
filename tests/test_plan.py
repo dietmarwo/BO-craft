@@ -282,3 +282,58 @@ def test_knowledge_gradient_fantasies_are_configurable():
     fit = fit_model(r["problem"], data, r["config"], 3)
     acq = knowledge_gradient(fit.model, r["problem"], r["config"], Space(r["problem"]))
     assert acq.num_fantasies == 4
+
+
+def test_pure_median_rule_matches_optuna():
+    from bo_craft.pruning import median_decision, should_prune
+
+    rng = random.Random(11)
+    agree = 0
+    for _ in range(150):
+        steps = rng.randint(1, 6)
+        completed = [
+            {k: rng.uniform(0, 1) for k in range(rng.randint(1, steps) if rng.random() < 0.3 else steps)}
+            for _ in range(rng.randint(0, 8))
+        ]
+        running = {k: rng.uniform(0, 1) for k in range(rng.randint(1, steps))}
+        direction = rng.choice(["minimize", "maximize"])
+        settings = {
+            "startup_trials": rng.randint(0, 4),
+            "warmup_steps": rng.randint(0, 2),
+            "direction": direction,
+        }
+        ours = median_decision(completed, running, **settings)["should_prune"]
+        theirs = (
+            should_prune(completed, running, policy="median", **settings)["should_prune"]
+            if completed
+            else False
+        )
+        assert ours == theirs, (completed, running, settings)
+        agree += 1
+    assert agree == 150
+
+
+def test_nan_gradients_are_retried_with_fresh_restarts(monkeypatch):
+    import botorch.optim
+    from botorch.exceptions.errors import OptimizationGradientError
+
+    original, calls = botorch.optim.optimize_acqf, []
+
+    def flaky(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise OptimizationGradientError("NaN gradient", current_x=None)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(botorch.optim, "optimize_acqf", flaky)
+    data = line([0.1, 0.3, 0.5, 0.7, 0.9], lambda v: {"y": v * v})
+    result = propose(request(X, data, {"backend": "botorch", "initial_points": 4, **LIGHT}))
+    assert result["diagnostics"]["acquisition_attempts"] == 2 and len(calls) == 2
+
+    def broken(*args, **kwargs):
+        raise OptimizationGradientError("NaN gradient", current_x=None)
+
+    monkeypatch.setattr(botorch.optim, "optimize_acqf", broken)
+    with pytest.raises(Error) as caught:
+        propose(request(X, data, {"backend": "botorch", "initial_points": 4, **LIGHT}))
+    assert caught.value.code == "numerical_failure"

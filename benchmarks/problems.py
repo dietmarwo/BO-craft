@@ -172,6 +172,31 @@ def _branin_currin():
     }
 
 
+def augmented_branin(x1, x2, s):
+    """BoTorch's AugmentedBranin: Branin at s = 1, a correlated lower fidelity below."""
+    t1 = x2 - (5.1 / (4 * math.pi**2) - 0.1 * (1 - s)) * x1**2 + 5 / math.pi * x1 - 6
+    return t1**2 + 10 * (1 - 1 / (8 * math.pi)) * math.cos(x1) + 10
+
+
+def _fidelity_problem(name, misleading):
+    def value(x):
+        s = x.get("s", 1.0)
+        target = augmented_branin(x["x1"], x["x2"], s)
+        if not misleading:
+            return target
+        # The low fidelity mirrors x1, so its minima lie elsewhere.
+        return s * augmented_branin(x["x1"], x["x2"], 1.0) + (1 - s) * branin(5.0 - x["x1"], x["x2"])
+
+    return {
+        "parameters": [continuous("x1", -5.0, 10.0), continuous("x2", 0.0, 15.0), continuous("s", 0.0, 1.0)],
+        "objectives": [{"name": "y", "direction": "minimize"}],
+        "fidelity": {"parameter": "s", "target": 1.0, "cost_intercept": 0.25, "cost_weight": 0.75},
+        "metrics": lambda x: {"y": value(x)},
+        "optimum": 0.397887357729738,
+        "scale": 52.0,
+    }
+
+
 HARTMANN6_INT_OPTIMUM = -3.253105230874208
 
 PROBLEMS = {
@@ -183,6 +208,8 @@ PROBLEMS = {
     "rosenbrock8": _rosenbrock8,
     "ackley20": _ackley20,
     "branin_currin": _branin_currin,
+    "branin_mf": lambda: _fidelity_problem("branin_mf", False),
+    "branin_mf_misleading": lambda: _fidelity_problem("branin_mf_misleading", True),
 }
 
 

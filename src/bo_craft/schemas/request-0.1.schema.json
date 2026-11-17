@@ -313,6 +313,17 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 512
+          },
+          "intermediate": {
+            "type": "object",
+            "maxProperties": 10000,
+            "propertyNames": {
+              "pattern": "^(0|[1-9][0-9]{0,8})$"
+            },
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Learning curve of the objective: step -> value; for pruned and completed observations of a single objective"
           }
         },
         "required": [
@@ -509,6 +520,12 @@
           "enum": [
             "tpe",
             "gp"
+          ]
+        },
+        "pruned": {
+          "enum": [
+            "ignore",
+            "last"
           ]
         }
       },

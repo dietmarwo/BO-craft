@@ -397,6 +397,32 @@
    "b": "lookahead-legacy:model",
    "criterion": "upper<=1.05",
    "note": "lookahead-chosen is the policy chosen by rule D3 in async-dev; seeds 501-530"
+  },
+  "G6-multifidelity": {
+   "set": "mf",
+   "a": "mf-kg:posterior",
+   "b": "target:posterior",
+   "strata": [
+    [
+     "branin_mf",
+     0
+    ]
+   ],
+   "criterion": "upper<1",
+   "note": "benchmarks/mf_panel.py, seeds 501-530; branin_mf_misleading is reported, not gated"
+  },
+  "G7a-pruning-time": {
+   "set": "pruning",
+   "a": "median:makespan",
+   "b": "none:makespan",
+   "criterion": "upper<1",
+   "note": "benchmarks/pruning_sim.py, seeds 501-530; makespan is the time to a completed trial within 0.1 of the optimum, censored at 400"
+  },
+  "G7b-pruning-regret": {
+   "set": "pruning",
+   "a": "median:empirical",
+   "b": "none:empirical",
+   "criterion": "upper<=1.05"
   }
  },
  "pending": {},

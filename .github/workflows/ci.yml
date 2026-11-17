@@ -33,3 +33,16 @@ jobs:
           "$RUNNER_TEMP/minimal/bin/pip" install dist/*.whl
           "$RUNNER_TEMP/minimal/bin/python" -c "import sys, bo_craft; assert not {'torch', 'optuna'} & set(sys.modules)"
           "$RUNNER_TEMP/minimal/bin/bo-craft" capabilities
+  vizier:
+    # The campaign Vizier study against a real in-process Vizier server
+    # (in-memory database), with the optional `vizier` extra.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[vizier]' pytest
+      - run: pytest -q tests/test_vizier.py -rs
+      - name: The tests ran rather than skipped
+        run: python -c "import vizier"

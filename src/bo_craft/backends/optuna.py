@@ -26,7 +26,14 @@ def propose(request):
     )
     sampler_kind = c.get("sampler", "tpe")
     # Settings that change BoTorch's algorithm must not be silently ignored here.
-    botorch_only = ["trust_region", "replication", "outcome_transform", "num_fantasies", "acq_maxiter"]
+    botorch_only = [
+        "trust_region",
+        "replication",
+        "outcome_transform",
+        "num_fantasies",
+        "acq_maxiter",
+        "pruned",
+    ]
     require(
         not any(k in c for k in botorch_only),
         "unsupported_combination",
@@ -86,6 +93,8 @@ def propose(request):
             {"constraints": [o["values"][v["name"]] for v in constraints]} if constraints and values else {}
         )
         system_attrs = {"constraints": attrs["constraints"]} if attrs else {}
+        # Optuna ranks pruned trials by their last reported value.
+        curve = {int(k): v for k, v in o.get("intermediate", {}).items()}
         study.add_trial(
             create_trial(
                 params=o["x"],
@@ -94,6 +103,7 @@ def propose(request):
                 state=state,
                 user_attrs=attrs,
                 system_attrs=system_attrs,
+                intermediate_values=curve,
             )
         )
     for o in request.get("pending", []):

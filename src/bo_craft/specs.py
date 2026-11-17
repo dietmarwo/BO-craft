@@ -188,6 +188,18 @@ def validate_request(request):
                 "invalid_observation",
                 "noncompleted outcomes are not numerical training targets",
             )
+        if "intermediate" in item:
+            require(
+                item["status"] in ("completed", "pruned") and len(problem["objectives"]) == 1,
+                "invalid_observation",
+                "learning curves belong to completed or pruned single-objective observations",
+            )
+            require(
+                item["intermediate"]
+                and all(math.isfinite(v) and not isinstance(v, bool) for v in item["intermediate"].values()),
+                "invalid_observation",
+                "a learning curve needs finite values",
+            )
     pending_ids = set()
     for item in request.get("pending", []):
         require(

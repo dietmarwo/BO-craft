@@ -37,6 +37,16 @@ def vizier_point(problem, parameters):
 
 
 def vizier(request, service):
+    """One study per campaign (study name, problem and algorithm).
+
+    Observations are imported once, keyed by observation ID and digest. A
+    completed observation at the point of an outstanding Vizier suggestion
+    completes that suggestion, so Vizier's own trials never stay active; a
+    failed one withdraws it. Suggestions that are neither pending nor held
+    for this request are withdrawn. With an ephemeral service (NO_ENDPOINT,
+    a fresh process) the study starts empty and the whole ledger is imported,
+    which gives the same result.
+    """
     p = request["problem"]
     require(
         not p.get("constraints") and not p.get("fidelity") and not p.get("input_constraints"),
@@ -57,7 +67,8 @@ def vizier(request, service):
     clients.environment_variables.server_endpoint = service["endpoint"]
     from vizier.service import pyvizier as vz
 
-    config = vz.StudyConfig(algorithm=service.get("backend", "RANDOM_SEARCH"))
+    algorithm = service.get("backend", "RANDOM_SEARCH")
+    config = vz.StudyConfig(algorithm=algorithm)
     for v in p["parameters"]:
         if v["type"] == "categorical":
             config.search_space.root.add_categorical_param(v["name"], v["choices"])
@@ -77,40 +88,76 @@ def vizier(request, service):
             else vz.ObjectiveMetricGoal.MAXIMIZE
         )
         config.metric_information.append(vz.MetricInformation(metric["name"], goal=goal))
-    # A request-scoped deterministic study makes observation ingestion rebuildable
-    # without mutating a long-lived external study with uncertain result updates.
-    study_id = service["study"] + "-" + digest(request)[:24]
+    study_id = service["study"] + "-" + digest({"problem": p, "algorithm": algorithm})[:24]
     study = clients.Study.from_study_config(config, owner="bo-craft", study_id=study_id)
+    client_id = digest(request)
+
+    def tag(trial):
+        return trial.metadata.ns("bo-craft")
+
     existing = list(study.trials().get())
-    imported = {
-        t.metadata.ns("bo-craft").get("observation_id"): t
-        for t in existing
-        if t.metadata.ns("bo-craft").get("observation_id")
-    }
+    imported = {tag(t).get("observation_id"): t for t in existing if tag(t).get("observation_id")}
+    open_states = (vz.TrialStatus.ACTIVE, vz.TrialStatus.REQUESTED)
+    outstanding = {}
+    for t in existing:
+        if t.status in open_states and not tag(t).get("observation_id"):
+            outstanding.setdefault(canonical(vizier_point(p, t.parameters)), []).append(t)
+    counts = {"imported": 0, "completed_suggestions": 0, "withdrawn": 0, "already_imported": 0}
+
+    def mark(observation):
+        metadata = vz.Metadata()
+        metadata.ns("bo-craft")["observation_id"] = observation["id"]
+        metadata.ns("bo-craft")["sha256"] = digest(observation)
+        return metadata
+
     for o in request.get("observations", []):
-        if o["status"] != "completed":
-            continue
         if o["id"] in imported:
             require(
-                imported[o["id"]].metadata.ns("bo-craft").get("sha256") == digest(o),
+                tag(imported[o["id"]]).get("sha256") == digest(o),
                 "study_diverged",
                 "Vizier observation differs from request ledger",
             )
+            counts["already_imported"] += 1
             continue
-        trial = vz.Trial(parameters=o["x"])
-        trial.metadata.ns("bo-craft")["observation_id"] = o["id"]
-        trial.metadata.ns("bo-craft")["sha256"] = digest(o)
-        trial.complete(vz.Measurement(o["values"]))
-        study.add_trial(trial)
-    # Vizier reuses outstanding trials for a client_id, making lost-ack reads
-    # reconcilable. Never complete the returned trials inside a proposal call.
-    trials = study.suggest(count=request["q"], client_id=digest(request))
+        match = outstanding.get(canonical(o["x"]))
+        suggestion = study.get_trial(match.pop(0).id) if match else None
+        if o["status"] != "completed":
+            # Failed, pruned, cancelled or unknown work is no measurement:
+            # withdraw the suggestion it came from, import nothing.
+            if suggestion is not None:
+                suggestion.delete()
+                counts["withdrawn"] += 1
+            continue
+        if suggestion is not None:
+            suggestion.update_metadata(mark(o))
+            suggestion.complete(vz.Measurement(o["values"]))
+            counts["completed_suggestions"] += 1
+        else:
+            trial = vz.Trial(parameters=o["x"])
+            # Metadata.update does not copy namespaces; set the tags directly.
+            trial.metadata.ns("bo-craft")["observation_id"] = o["id"]
+            trial.metadata.ns("bo-craft")["sha256"] = digest(o)
+            trial.complete(vz.Measurement(o["values"]))
+            study.add_trial(trial)
+            counts["imported"] += 1
+    pending = {canonical(o["x"]) for o in request.get("pending", [])}
+    for key, trials in outstanding.items():
+        for t in trials:
+            # Pending evaluations and this request's own outstanding answer stay.
+            if key in pending or t.assigned_worker == client_id:
+                continue
+            study.get_trial(t.id).delete()
+            counts["withdrawn"] += 1
+    # Vizier returns this client's outstanding trials first, so a repeated
+    # request after a lost answer gets the same suggestions.
+    trials = study.suggest(count=request["q"], client_id=client_id)
     points = [vizier_point(p, t.parameters) for t in trials]
     return points, {
         "study": study_id,
         "trial_ids": [t.id for t in trials],
-        "algorithm": service.get("backend", "RANDOM_SEARCH"),
-        "scope": "request-scoped study projection; outstanding suggestions retained",
+        "algorithm": algorithm,
+        "scope": "campaign study; observations imported once by ID and digest",
+        "reconciliation": counts,
     }
 
 

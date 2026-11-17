@@ -17,7 +17,7 @@ Choose before a campaign. Nothing switches the backend inside one.
 
 ## Make a request
 
-Define named parameters and objective directions in bo.problem/0.1. Supply evaluator id/version, units and input hashes for real models. Each observation has immutable id/trial_id, named physical x, status, raw values and available uncertainty. Completed observations contain every objective/constraint metric. Failed, cancelled, pruned and unknown work do not become numerical GP targets.
+Define named parameters and objective directions in bo.problem/0.1. Supply evaluator id/version, units and input hashes for real models. Each observation has immutable id/trial_id, named physical x, status, raw values and available uncertainty. Completed observations contain every objective/constraint metric. Failed, cancelled, pruned and unknown work do not become numerical GP targets, with one opt-in exception for pruned trials (below).
 
 For known-noise mode provide variance for every observed metric. An aggregate over independent replications records count and variance_kind=mean. Variance of individual outcomes is not variance of their sample mean. `bo_craft.specs.aggregate` requires distinct replicate seeds and preserves source IDs. A physical model must justify independence; the utility cannot infer it.
 
@@ -46,8 +46,17 @@ Conditional parameters (`active_if`) are refused before any evaluation; use Optu
 | `trust_region` | false | experimental TuRBO-1 box for scalar, unconstrained, continuous problems |
 | `num_fantasies` | 16 | multifidelity knowledge gradient |
 | `feasibility_probability` | 0.95 | for `recommend --kind model` with constraints |
+| `pruned` | `ignore` | `last`: train on each pruned trial's last intermediate value (one unconstrained objective, no fidelity) |
+
+If the acquisition optimizer fails with NaN gradients, the backend rebuilds the acquisition with fresh Monte Carlo samples and restarts, at most twice; `acquisition_attempts` in the diagnostics counts the attempts. A proposal that does not fail is unchanged.
 
 Diagnostics of every model proposal include the fitted lengthscales, the noise variance and exact leave-one-out residuals in standardized units. A leave-one-out RMS z-score well above 1 means the model is overconfident, and a lengthscale at its lower bound means it found no smooth structure. Both are reported as warnings; neither changes the proposal.
+
+## Learning curves and pruning
+
+A completed or pruned observation of a single-objective problem may carry `intermediate`: its learning curve, a map from step (written as a string) to a finite value. `bo_craft.pruning.median_decision(completed_curves, curve, direction=..., startup_trials=5, warmup_steps=1)` answers whether a running trial should stop: its best value so far is worse than the median of the completed curves at its latest step. It is Optuna's median rule without Optuna.
+
+A pruned trial has no values. The BoTorch backend drops it unless `pruned: last`, which trains on its last intermediate value. Without that, BoTorch keeps proposing where trials were just pruned. TPE receives pruned trials with their curves either way. experiment-craft runs the rule live in adaptive campaigns. On simulated learning curves it showed no time or regret gain (gates G7a/G7b, [note](pruning-and-services.md#pruning)), so use it only where early values rank evaluations reliably.
 
 ## Recommendations
 
@@ -105,10 +114,12 @@ Input constraints are exact linear physical-space filters for supported active n
 
 For multiple objectives supply a raw-unit reference point before the comparison. Keep directions, normalization and reference point fixed. `recommend` reports empirical feasible nondominated observations; noisy posterior fronts need fresh-set validation.
 
-Multifidelity KG is an experimental scalar, continuous, synchronous adapter. Declare normalized-fidelity cost intercept/weight and the raw target fidelity. It currently rejects constraints and pending evaluations. Compare against target-fidelity-only optimization at equal total cost. A low-fidelity value is not a target-fidelity answer.
+Multifidelity KG is an experimental scalar, continuous, synchronous adapter. Declare normalized-fidelity cost intercept/weight and the raw target fidelity. It currently rejects constraints and pending evaluations. A low-fidelity value is not a target-fidelity answer.
+
+**Prefer target-fidelity BO.** In the confirmation of 17 November (gate G6), at a cost of 0.25 + 0.75 s on augmented Branin, the knowledge gradient spent every evaluation after the initial design below the target fidelity. Its posterior regret was 10.1 [4.8, 21.7] times that of target-only BO at equal cost, and 6 of 30 runs failed numerically. Use it only after comparing it with target-only optimization at equal cost on your own problem. Use inferred noise: with `noise: deterministic` the multifidelity GP failed numerically.
 
 ## Optional adapters and reproducibility
 
-Install the pinned Vizier extra only when needed. Configure endpoint/study and a tested algorithm; the local DEFAULT GP smoke is not remote outage acceptance. The BO-MCP import bridge expects pre-generated pending suggestions in an existing campaign and does not synchronize results automatically.
+Install the pinned Vizier extra only when needed. Configure endpoint/study and a tested algorithm. Each campaign keeps one Vizier study: observations are imported once, Vizier's suggestions are completed by their observations and withdrawn when they fail or are abandoned ([note](pruning-and-services.md#vizier)). The local server tests are not remote outage acceptance. The BO-MCP import bridge expects pre-generated pending suggestions in an existing campaign and does not synchronize results automatically.
 
 Run `pytest`, `ruff check .`, and `python -m build`. The synthetic benchmark harness uses independent watchdogs, two worker processes, immutable cell identities and retained failures. The evidence report includes all 180 scalar confirmation cells and a 15-cell 20D pilot. These are small synthetic examples; they do not establish performance across real engineering experiments or large conditional spaces.

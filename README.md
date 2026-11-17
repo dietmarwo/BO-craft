@@ -2,7 +2,7 @@
 
 Typed Bayesian optimization proposals for expensive experiments, integrated with experiment-craft and optimization-jobs. This is an experimental source release, not a published package or hosted service.
 
-BoTorch supplies noisy continuous and mixed (integer, categorical) models, constraints, several objectives and bounded scalar multifidelity. Optuna supplies TPE for mixed and conditional spaces, and a GP sampler for unconditional ones. Recommendations are empirical (best observed), model-based (the observed point the fitted GP ranks best) or posterior predictions. A tested optional Vizier adapter uses request-scoped study projections. An experimental read-only BO-MCP bridge can import pre-generated suggestions; it does not generate or synchronize campaigns automatically.
+BoTorch supplies noisy continuous and mixed (integer, categorical) models, constraints, several objectives and an experimental scalar multifidelity knowledge gradient, which lost clearly to target-fidelity BO at equal cost. Optuna supplies TPE for mixed and conditional spaces, and a GP sampler for unconditional ones. Recommendations are empirical (best observed), model-based (the observed point the fitted GP ranks best) or posterior predictions. A median pruning rule and learning-curve observations support experiment-craft's opt-in live pruning. A tested optional Vizier adapter keeps one study per campaign. An experimental read-only BO-MCP bridge can import pre-generated suggestions; it does not generate or synchronize campaigns automatically.
 
 | Layer | Owner |
 |---|---|
