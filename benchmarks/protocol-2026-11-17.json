@@ -1,0 +1,389 @@
+{
+ "schema": "bo-craft.benchmark-protocol/1",
+ "date": "2026-11-17",
+ "arms": {
+  "botorch-0.1.0": {
+   "source": "baseline",
+   "config": {
+    "backend": "botorch"
+   },
+   "rules": [
+    "empirical"
+   ],
+   "note": "BO-craft e3dced1 (0.1.0) with its defaults"
+  },
+  "botorch-s0": {
+   "config": {
+    "backend": "botorch",
+    "num_restarts": 4,
+    "raw_samples": 128,
+    "acq_maxiter": 50
+   },
+   "note": "0.1.0's acquisition settings"
+  },
+  "botorch-s1": {
+   "config": {
+    "backend": "botorch",
+    "num_restarts": 8,
+    "raw_samples": 256,
+    "acq_maxiter": 100
+   }
+  },
+  "botorch-s2": {
+   "config": {
+    "backend": "botorch",
+    "num_restarts": 10,
+    "raw_samples": 512,
+    "acq_maxiter": 200
+   }
+  },
+  "botorch": {
+   "config": {
+    "backend": "botorch"
+   },
+   "note": "this branch's defaults"
+  },
+  "tpe": {
+   "config": {
+    "backend": "optuna"
+   }
+  },
+  "optuna-gp": {
+   "config": {
+    "backend": "optuna",
+    "sampler": "gp"
+   }
+  },
+  "random": {
+   "config": {
+    "backend": "random"
+   }
+  },
+  "botorch-rep-0.5": {
+   "config": {
+    "backend": "botorch",
+    "replication": "incumbent",
+    "replication_threshold": 0.5
+   }
+  },
+  "botorch-rep-1": {
+   "config": {
+    "backend": "botorch",
+    "replication": "incumbent",
+    "replication_threshold": 1.0
+   }
+  },
+  "botorch-tr": {
+   "config": {
+    "backend": "botorch",
+    "trust_region": true
+   }
+  },
+  "botorch-log": {
+   "config": {
+    "backend": "botorch",
+    "outcome_transform": "log"
+   }
+  },
+  "botorch-bilog": {
+   "config": {
+    "backend": "botorch",
+    "outcome_transform": "bilog"
+   }
+  }
+ },
+ "sets": {
+  "acq-dev": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "branin",
+     "noise": 0,
+     "budget": 30
+    },
+    {
+     "problem": "branin",
+     "noise": 0.1,
+     "budget": 30
+    },
+    {
+     "problem": "hartmann6",
+     "noise": 0,
+     "budget": 60
+    },
+    {
+     "problem": "hartmann6",
+     "noise": 0.1,
+     "budget": 60
+    }
+   ],
+   "arms": [
+    "botorch-s0",
+    "botorch-s1",
+    "botorch-s2"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "mixed-dev": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "hartmann6_int",
+     "noise": 0,
+     "budget": 50
+    },
+    {
+     "problem": "hartmann6_int",
+     "noise": 0.1,
+     "budget": 50
+    },
+    {
+     "problem": "branin_cat",
+     "noise": 0,
+     "budget": 30
+    },
+    {
+     "problem": "branin_cat",
+     "noise": 0.1,
+     "budget": 30
+    }
+   ],
+   "arms": [
+    "tpe",
+    "botorch",
+    "optuna-gp"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "replication-dev": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "hartmann6",
+     "noise": 0.3,
+     "budget": 60
+    },
+    {
+     "problem": "branin",
+     "noise": 0.3,
+     "budget": 30
+    }
+   ],
+   "arms": [
+    "botorch",
+    "botorch-rep-0.5",
+    "botorch-rep-1"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "tr-pilot": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "ackley20",
+     "noise": 0,
+     "budget": 80
+    }
+   ],
+   "arms": [
+    "botorch",
+    "botorch-tr",
+    "tpe",
+    "random"
+   ],
+   "rules": [
+    "empirical"
+   ]
+  },
+  "mo-pilot": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "branin_currin",
+     "noise": 0.1,
+     "budget": 40
+    }
+   ],
+   "arms": [
+    "botorch",
+    "optuna-gp",
+    "random"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "transform-pilot": {
+   "seeds": "0-9",
+   "strata": [
+    {
+     "problem": "rosenbrock8",
+     "noise": 0,
+     "budget": 60
+    }
+   ],
+   "arms": [
+    "botorch",
+    "botorch-log",
+    "botorch-bilog"
+   ],
+   "rules": [
+    "empirical"
+   ]
+  },
+  "phase1-confirm": {
+   "seeds": "501-530",
+   "strata": [
+    {
+     "problem": "branin",
+     "noise": 0,
+     "budget": 30
+    },
+    {
+     "problem": "branin",
+     "noise": 0.1,
+     "budget": 30
+    },
+    {
+     "problem": "hartmann6",
+     "noise": 0,
+     "budget": 60
+    },
+    {
+     "problem": "hartmann6",
+     "noise": 0.1,
+     "budget": 60
+    },
+    {
+     "problem": "branin_constrained",
+     "noise": 0.1,
+     "budget": 30
+    }
+   ],
+   "arms": [
+    "botorch-0.1.0",
+    "botorch"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "mixed-confirm": {
+   "seeds": "501-530",
+   "strata": [
+    {
+     "problem": "hartmann6_int",
+     "noise": 0,
+     "budget": 50
+    },
+    {
+     "problem": "hartmann6_int",
+     "noise": 0.1,
+     "budget": 50
+    },
+    {
+     "problem": "branin_cat",
+     "noise": 0,
+     "budget": 30
+    },
+    {
+     "problem": "branin_cat",
+     "noise": 0.1,
+     "budget": 30
+    }
+   ],
+   "arms": [
+    "tpe",
+    "botorch",
+    "optuna-gp"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  },
+  "replication-confirm": {
+   "seeds": "501-530",
+   "strata": [
+    {
+     "problem": "hartmann6",
+     "noise": 0.3,
+     "budget": 60
+    },
+    {
+     "problem": "branin",
+     "noise": 0.3,
+     "budget": 30
+    }
+   ],
+   "arms": [
+    "botorch",
+    "botorch-rep"
+   ],
+   "rules": [
+    "empirical",
+    "model"
+   ]
+  }
+ },
+ "gates": {
+  "G1-model-recommendation": {
+   "set": "phase1-confirm",
+   "a": "botorch:model",
+   "b": "botorch:empirical",
+   "strata": [
+    [
+     "branin",
+     0.1
+    ],
+    [
+     "hartmann6",
+     0.1
+    ],
+    [
+     "branin_constrained",
+     0.1
+    ]
+   ],
+   "criterion": "upper<1"
+  },
+  "G2-no-regression": {
+   "set": "phase1-confirm",
+   "a": "botorch:empirical",
+   "b": "botorch-0.1.0:empirical",
+   "criterion": "upper<=1.05"
+  },
+  "G3a-mixed-botorch": {
+   "set": "mixed-confirm",
+   "a": "botorch:empirical",
+   "b": "tpe:empirical",
+   "criterion": "upper<1"
+  },
+  "G3b-mixed-optuna-gp": {
+   "set": "mixed-confirm",
+   "a": "optuna-gp:empirical",
+   "b": "tpe:empirical",
+   "criterion": "upper<1"
+  },
+  "G4-replication": {
+   "set": "replication-confirm",
+   "a": "botorch-rep:model",
+   "b": "botorch:model",
+   "criterion": "upper<1"
+  }
+ },
+ "pending": {
+  "botorch-rep": "defined after replication-dev by rule D2, before any confirmation run"
+ }
+}
