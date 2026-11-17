@@ -151,8 +151,11 @@ def cell(protocol, set_name, problem_name, level, budget, arm_name, seed):
                 "latent": latent,
             }
         )
+    import bo_craft
+
     record = {
         "status": "completed",
+        "source": str(Path(bo_craft.__file__).resolve().parent.parent),
         "seconds": time.monotonic() - began,
         "proposal_seconds": sum(proposals),
         "replicates": replicates,
@@ -218,6 +221,8 @@ def run(args):
         env = dict(os.environ, PYTHONHASHSEED="0", OMP_NUM_THREADS="1", MKL_NUM_THREADS="1")
         if source == "baseline":
             env["PYTHONPATH"] = str(Path(args.baseline_src).resolve())
+        elif args.current_src:
+            env["PYTHONPATH"] = str(Path(args.current_src).resolve())
         command = [sys.executable, __file__, "cell", "--protocol", args.protocol, "--set", args.set]
         command += ["--problem", problem, "--noise", str(level), "--budget", str(budget)]
         command += ["--arm", arm, "--seed", str(seed)]
@@ -260,6 +265,7 @@ def main():
     r.add_argument("--workers", type=int, default=2)
     r.add_argument("--watchdog", type=int, default=1800)
     r.add_argument("--baseline-src", default="")
+    r.add_argument("--current-src", default="", help="a frozen copy of src/ for the current arms")
     c = sub.add_parser("cell")
     c.add_argument("--protocol", required=True)
     c.add_argument("--set", required=True)
