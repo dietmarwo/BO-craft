@@ -31,6 +31,7 @@ results changes after a run starts.
   - For each setting and stratum, take the median model-rule regret.
   - A setting qualifies if its median is at most 1.05 × the best setting's median in every stratum.
   - The qualifying setting with the lowest total median proposal time becomes the default.
+  - *Amendment, committed while `acq-dev` was running and before its final table:* if no setting qualifies, s0 (0.1.0's settings) stays the default.
 - **D2, replication threshold (`replication-dev`).** τ ∈ {0.5, 1.0}: the threshold with the lower geometric mean, over the strata, of median model-rule regret becomes `botorch-rep`, before any confirmation run.
 - **Pilots without gates:** `mixed-dev` (sanity), `tr-pilot` (trust region, Ackley-20), `mo-pilot` (Branin–Currin), `transform-pilot` (Rosenbrock-8). Their capabilities stay experimental.
 
