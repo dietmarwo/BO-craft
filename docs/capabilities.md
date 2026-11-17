@@ -20,8 +20,8 @@
 | Multifidelity KG / cost | Experimental scalar synchronous adapter | Real numerical test, target-fidelity recommendation semantics; `num_fantasies` configurable; never compared with target-only BO at equal cost |
 | Posterior recommendation | Experimental scalar unconstrained BoTorch | Independent linear-solve and prediction tests |
 | Replicate aggregation | Implemented utility | Independent-seed and variance-of-mean tests |
-| Pruning | Library-only single-objective policy | Median/Hyperband utility; live streaming needs an optimization-jobs channel ([note](pruning-and-services.md)) |
-| Vizier | Optional request-scoped adapter | Real local DEFAULT GP and RANDOM_SEARCH; remote faults uncommissioned; a campaign-scoped study is designed but not built ([note](pruning-and-services.md)) |
+| Pruning | Experimental, opt-in; live in experiment-craft's adaptive campaigns | Median rule matches Optuna's on 150 random cases; `intermediate` curves and `pruned: last`; runner-backed cancel test in experiment-craft. Gates G7a/G7b failed: on Hartmann-6 learning curves at equal time, 0.98 [0.91, 1.05] × the time to target and 0.76 [0.43, 1.29] × the regret ([note](pruning-and-services.md#pruning)) |
+| Vizier | Optional campaign-scoped adapter | One study per campaign; 50 proposals against a real local server import each observation once and complete each suggestion; failed and abandoned suggestions withdrawn; divergence detected (own CI job); remote faults uncommissioned ([note](pruning-and-services.md#vizier)) |
 | BO-MCP | Experimental read-only import | Contract-tested query; no live server acceptance or automatic mutation |
 | Higher dimensions | Pilot evidence only | 20D Ackley pilots (0.1.0: 5 seeds, 12 calls; 17 November: 10 seeds, 80 calls, BoTorch 0.56 × random and 0.75 × TPE regret, trust region no gain); no automatic selector/SAAS claim |
 | Adaptive campaign durability | Implemented local experiment-craft extension | Lost launch answer, six unique outcomes, no repeated dispatch, paused backup/restore |

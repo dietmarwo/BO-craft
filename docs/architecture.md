@@ -24,7 +24,7 @@ Pause, backup and restore reuse the campaign maintenance layer. Restored workspa
 
 ## Optional services
 
-Vizier uses a study ID derived from the logical request digest and a client_id for outstanding suggestions. Completed observations are imported with identity/digest metadata, so a partial import is reconciled. Real local DEFAULT GP and RANDOM_SEARCH service logic was tested. Network-disconnect/remote-service recovery is a separate acceptance gate. NO_ENDPOINT is local testing; production uses a configured persistent service endpoint.
+Vizier keeps one study per campaign: its ID is the configured study name plus a digest of the problem and algorithm, and the request digest is the client_id for outstanding suggestions. Completed observations are imported once with identity/digest metadata; an observation at an outstanding suggestion's point completes that suggestion, and failed or abandoned suggestions are withdrawn. Real local DEFAULT GP and RANDOM_SEARCH service logic was tested. Network-disconnect/remote-service recovery is a separate acceptance gate. NO_ENDPOINT is local testing; production uses a configured persistent service endpoint.
 
 The BO-MCP bridge only queries existing pending suggestions. The inspected generation API has no idempotency key, so automatic generation/result synchronization was not enabled. Its protocol has a contract test; a full live BO-MCP deployment was not commissioned. Treat it as an experimental import bridge, not equivalent to the BoTorch backend.
 
@@ -32,4 +32,4 @@ The BO-MCP bridge only queries existing pending suggestions. The inspected gener
 
 Native results retain their original claims. One seeded evaluation being rechecked does not establish the expectation of a stochastic objective. Empirical recommendations identify historical observations; posterior recommendations identify predictions and conditional GP uncertainty. Fresh independent replicates provide separate validation evidence. No BO result proves global optimality or physical safety.
 
-Multifidelity empirical recommendations use target-fidelity observations only. Posterior recommendations project to target fidelity. Pruning is currently a single-objective library policy: the evaluator/campaign must publish intermediate metrics and confirm cancellation. This source release does not claim a live streaming-pruning worker protocol.
+Multifidelity empirical recommendations use target-fidelity observations only. Posterior recommendations project to target fidelity. Pruning is a single-objective policy: this package decides (`median_decision`) and trains on pruned curves when asked (`pruned: last`); experiment-craft reads the evaluator's progress file through optimization-jobs, records the decision and confirms the cancellation.

@@ -1,37 +1,65 @@
-# Pruning and service adapters: state and next steps
+# Pruning and service adapters
 
-Phase 6 of the [improvement plan](plans/bo-craft-improvement-plan-2026-11-17.md). Nothing here changes behaviour. The note records why each item is where it is, and what a change would need.
+Phase 6 of the [improvement plan](plans/bo-craft-improvement-plan-2026-11-17.md). The first implementation left pruning and a campaign-scoped Vizier study unbuilt; both are built now. This note records how each works, what was measured and what stays open.
 
 ## Pruning
 
-`bo_craft.pruning.should_prune` is a library decision. It takes completed learning curves and the running trial's intermediate values, and answers prune or continue with Optuna's median or Hyperband rule. Nothing calls it during a campaign.
+Pruning stops evaluations whose learning curve is worse than the completed trials' curves. It is built across three repositories:
 
-**Why it isn't wired:**
-- An evaluation in experiment-craft is one optimization-jobs job, either a trusted command or an `fcmaes.evaluate/1` point.
-- The runtime retains a job's declared outputs when the job ends. It does not stream intermediate metrics from a running job.
-- A prune decision therefore has nothing to act on while the evaluation runs.
+1. **optimization-jobs** (after 0.4.1): a command job may declare a progress file, `"progress": {"path", "max_bytes"}`. The evaluator appends JSON lines to it, and `jobs progress JOB_ID` returns the complete lines while the job runs and after it ends. The file is an observation channel: it is not sealed and has no digest, and the job's outputs and terminal record are unchanged.
+2. **experiment-craft**: `pruning: {"policy": "median"}` in an adaptive manifest. The campaign declares `progress.jsonl` for each command evaluation and reads `{"step", "value"}` lines. It asks `median_decision` (below) for each running evaluation, records the decision, and only then asks the runtime to cancel the job. A confirmed cancel makes the trial a `pruned` observation with its curve. Its [guide](https://github.com/dietmarwo/experiment-craft/blob/main/docs/adaptive-bo.md#pruning) has the evaluator contract.
+3. **BO-craft**:
+   - `bo_craft.pruning.median_decision(completed, intermediate, direction=..., startup_trials=5, warmup_steps=1)` is Optuna's median rule in plain Python, without Optuna. A test compares it with Optuna's `MedianPruner` on 150 random cases.
+   - Observations may carry `intermediate`, a map from step (as a string) to value. Only completed and pruned single-objective observations may.
+   - `config.pruned` (BoTorch only) chooses how the GP treats pruned trials. `ignore` (the default) drops them. `last` trains on each one's last intermediate value, as a completed value. It needs one unconstrained objective without fidelity.
+   - Optuna's TPE receives pruned trials as `PRUNED` with their intermediate values. It ranks them below completed trials, by their last step and value.
 
-**What wiring would need:**
-1. **optimization-jobs:** a declared intermediate-metric channel for command jobs. For example, an append-only `progress.jsonl` output that the runner retains as it grows, with a size limit, plus a read command (`jobs progress JOB_ID`) that returns the lines as typed JSON. It must not change the job's terminal contract.
-2. **experiment-craft:** poll that channel for running evaluation jobs and call `should_prune`. If it says prune, ask the runtime to cancel the job, and record the trial as `pruned` with the partial cost. A pruned trial is not a numerical observation. Only a confirmed stop releases its reservation.
-3. **BO-craft:** none beyond today's function. Pruned trials already enter TPE as `PRUNED` and are excluded from GP training.
+`should_prune` (median or Hyperband through Optuna) remains as a library function.
 
-**Gate when built:** at equal total evaluation time, pruning shortens time-to-target on a learning-curve problem without raising the regret of the final recommendation. Cancellation must be confirmed in the runtime's records.
+**Why `pruned: last` exists.** In the first smoke run, BoTorch ignored pruned trials and kept proposing where it had just pruned: 63 of 76 trials were pruned, and the final regret was 1.75 against 0.043 without pruning. With `last`, a pruned region counts as poor.
+
+**Measured effect: none shown** (gates G7a/G7b of the [protocol](evidence/plan-2026-11-17/README.md#g7-median-pruning-at-equal-total-evaluation-time), committed before the runs). The simulation uses Hartmann-6 learning curves of 10 steps, a budget of 400 time units (40 full evaluations) and 30 fresh seeds:
+
+| Arm | Trials | Pruned | Time to regret 0.1 (median; censored at 400) | Final regret (geometric mean) |
+| --- | --- | --- | --- | --- |
+| BoTorch, no pruning | 40 | 0 | 345 (10 censored) | 0.041 |
+| BoTorch, median pruning, `pruned: last` | 54.0 | 18.6 | 308.5 (12 censored) | 0.031 |
+| TPE, no pruning | 40 | 0 | 400 (30 censored) | 0.59 |
+| TPE, median pruning | 48.2 | 11.0 | 400 (30 censored) | 0.46 |
+
+The paired ratios for BoTorch with against without pruning:
+- time to target: 0.98 [0.91, 1.05], pruning faster in 10 seeds and slower in 12; G7a needed an upper bound below 1;
+- final regret: 0.76 [0.43, 1.29]; G7b needed an upper bound of at most 1.05.
+
+Both gates failed. Pruning ran more trials in the same time, but did not reach the target sooner, and the regret estimate is too wide to rule out a loss. It stays opt-in.
+
+**Open:**
+- `fleet` (SSH) placements have no progress command.
+- Only the median rule is wired.
+- Native `fcmaes.evaluate/1` evaluations have no curve and cannot be pruned.
 
 ## Vizier
 
-The adapter creates one study per request (the study ID includes the request digest). It imports every completed observation into that study and asks it for suggestions. This keeps proposals reconstructible from the ledger, but every proposal re-imports the whole history, and each one leaves a study on the server.
+The adapter keeps one study per campaign. Its ID is the configured study name plus a digest of the problem and the algorithm. Each proposal reconciles the request's ledger with the study and then asks for suggestions:
 
-**Why it is unchanged:**
-- One study per campaign would also have to complete Vizier's own suggested trials with the observations that came back for them. Otherwise they stay active, and Vizier's designer treats them as pending.
-- That needs a mapping from suggestion to observation that survives lost answers. Its tests need a live Vizier service; the optional `vizier` extra (Jax and Flax) is not installed in this repository's CI.
-- The plan's gate for this change, a local Vizier test over 50 proposals that imports each observation once, could not be run in the session that implemented the plan.
+1. **Import once.** Each imported trial carries the observation ID and digest (namespace `bo-craft`). An observation that is already imported is checked against its digest: a differing one is `study_diverged`. It is not imported again.
+2. **Complete Vizier's suggestions.** A completed observation at the point of an outstanding (active or requested) suggestion completes that suggestion, so Vizier's own trials do not stay active. Any other completed observation is added as a completed trial.
+3. **Withdraw what never comes back.** A failed, pruned, cancelled or unknown observation deletes the suggestion it came from. So does any outstanding suggestion that is neither pending in the request nor held for this request.
+4. **Lost answers.** The client ID is the request digest. Vizier returns a client's outstanding trials first, so repeating a request after a lost answer gets the same suggestions.
 
-**What a change would need:**
-1. Mark each imported trial with the observation ID, as today.
-2. Complete a returned suggestion when an observation with the same point and the proposal's `trial_ids` arrives.
-3. Stop suggestions that never come back.
-4. Run the 50-proposal test against a local Vizier server.
+The proposal's diagnostics report the study, the trial IDs and the reconciliation counts (`imported`, `completed_suggestions`, `withdrawn`, `already_imported`).
+
+**Tests** (`tests/test_vizier.py`, run in their own CI job with the `vizier` extra) use a real local Vizier server with an in-memory database:
+- 50 proposals with an observation after each: every observation is imported exactly once, each candidate completes its own suggestion, and only the last, unobserved suggestion is still active;
+- failed and abandoned suggestions are withdrawn;
+- a changed observation is `study_diverged`;
+- integer and categorical parameters keep their types;
+- the in-process `NO_ENDPOINT` service reconciles the same way.
+
+**Notes:**
+- `DefaultVizierServer` keeps its default database in a file inside the installed package, so studies survive between processes on a machine. Give tests and throwaway runs an in-memory database (`database_url="sqlite:///:memory:"`).
+- With `NO_ENDPOINT` each proposal process starts an empty study and imports the whole ledger, which gives the same result.
+- Remote-service outages and network faults are not commissioned.
 
 ## BO-MCP
 
