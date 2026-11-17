@@ -381,9 +381,26 @@
    "a": "botorch-rep:model",
    "b": "botorch:model",
    "criterion": "upper<1"
+  },
+  "G5-lookahead": {
+   "set": "async",
+   "a": "lookahead-chosen:model",
+   "b": "lookahead-legacy:model",
+   "criterion": "upper<=1.05",
+   "note": "lookahead-chosen is the policy chosen by rule D3 in async-dev; seeds 501-530"
   }
  },
  "pending": {
   "botorch-rep": "defined after replication-dev by rule D2, before any confirmation run"
+ },
+ "async": {
+  "dev_seeds": "0-9",
+  "confirm_seeds": "501-530",
+  "policies": [
+   "legacy",
+   "0",
+   "1"
+  ],
+  "script": "benchmarks/async_sim.py"
  }
 }

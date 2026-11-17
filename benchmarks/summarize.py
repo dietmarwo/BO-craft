@@ -40,6 +40,8 @@ def stratum(cell):
 def regret(cell, rule):
     if cell.get("status") != "completed":
         return None
+    if rule == "makespan":
+        return cell["makespan"]
     value = cell["rules"].get(rule, {}).get("regret")
     if value is None:
         return None
