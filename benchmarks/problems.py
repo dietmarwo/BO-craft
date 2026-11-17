@@ -167,6 +167,8 @@ def _branin_currin():
         # Hypervolume of the true front against the reference point, as in BoTorch.
         "optimum": 59.36011874867746,
         "scale": 52.0,
+        # Per-objective noise scales (added after mo-pilot ran with 52 for both).
+        "scales": {"branin": 52.0, "currin": 2.6},
     }
 
 

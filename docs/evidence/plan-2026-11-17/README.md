@@ -137,3 +137,18 @@ Median empirical regret, with the median proposal seconds per run in brackets, a
 **Both gates fail**, because of the noisy categorical Branin stratum. There, neither GP route is distinguishable from TPE; their medians are worse and their geometric means are level. In the other three strata, both routes are far ahead of TPE: 2.4 to 73 times lower regret (geometric means), with intervals well below 1.
 
 **Consequence, as declared:** TPE stays the documented default for mixed spaces. Both GP routes are documented as experimental, with this table. The data suggest choosing a GP route when integer or categorical parameters come with little noise. Under noise and a categorical choice, neither GP route is better than TPE here.
+
+## Pilots (development seeds 0–9, no gates)
+
+| Pilot | Arms | Result |
+|---|---|---|
+| `transform-pilot`: Rosenbrock-8, noise 0, 60 calls | BoTorch with `log` / `bilog` against standardization | regret ratio 0.046 [0.026, 0.083] (log) and 0.052 [0.023, 0.12] (bilog); better in 10/10 seeds |
+| `mo-pilot`: Branin–Currin, noise 0.1, 40 calls | BoTorch, Optuna GP, random | model answer against empirical front, hypervolume regret: BoTorch 0.50 [0.35, 0.69] (9/0), Optuna GP 0.80 [0.66, 0.97] |
+| `tr-pilot`: Ackley-20, noise 0, 80 calls | BoTorch with and without `trust_region`, TPE, random | trust region against plain BoTorch: 1.04 [0.93, 1.16] (5/5). BoTorch against random: 0.56 [0.50, 0.64]; against TPE: 0.75 [0.67, 0.86] |
+
+**Caveat for `mo-pilot`.** It added noise with Branin's scale (5.2) to both objectives. That is twice the spread of Currin (2.6), so Currin was very noisy. The harness now has per-objective noise scales for later runs.
+
+**Reading.**
+- The transforms and the multi-objective model answer are strong pilot results that a fresh-seed confirmation could promote.
+- The trust region shows no benefit at this budget and stays experimental.
+- Random sampling reaches only about 4 of the 59.4 attainable hypervolume on Branin–Currin with 40 points, so the hypervolume regrets are large for every arm.

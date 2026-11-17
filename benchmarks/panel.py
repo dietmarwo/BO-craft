@@ -41,9 +41,11 @@ def uniform_point(problem, rng):
 def noisy(problem, latent, level, seed, index):
     """Objective noise with a stream that depends only on seed and evaluation index."""
     values = dict(latent)
+    scales = problem.get("scales", {})
     for k, m in enumerate(problem["objectives"]):
         rng = random.Random(seed * 1_000_003 + index * 101 + k)
-        values[m["name"]] = latent[m["name"]] + rng.gauss(0.0, level * problem["scale"])
+        scale = scales.get(m["name"], problem["scale"])
+        values[m["name"]] = latent[m["name"]] + rng.gauss(0.0, level * scale)
     return values
 
 

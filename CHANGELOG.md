@@ -17,6 +17,7 @@ Experimental 0.1.0 source; nothing is tagged or published.
   - `trust_region`, `num_fantasies` and `feasibility_probability`.
 - Proposals may declare `replicate_of`. A repeated point is accepted only as a declared replicate of a completed observation.
 - Model diagnostics in every model proposal: lengthscales, noise variance and exact leave-one-out residuals, with warnings.
+- Pilots on development seeds (no gates): outcome transforms cut Rosenbrock-8 regret about 20-fold; the model answer halved the noisy Branin–Currin hypervolume regret; the trust region gave no gain on Ackley-20.
 - [Pruning and service adapters](docs/pruning-and-services.md): why pruning is not wired and why a campaign-scoped Vizier study is not built, and what each would need.
 - Added strict scientific contracts, BoTorch GP/constraint/multiobjective/multifidelity proposals, Optuna mixed/conditional TPE, empirical and scalar posterior recommendations, replication and pruning utilities.
 - Added optional Vizier study projections and an explicitly read-only BO-MCP import bridge.
