@@ -1,0 +1,33 @@
+{
+  "schema_version": "bo.proposal/0.1",
+  "request_sha256": "7c4b69e687a88fa69c820aaec7124458d06ff5ebc156535dbfde8c2cfac79bbd",
+  "problem_sha256": "029da4a133e50c758772b0a8cb3cf03d5f2ad3ea402fae9b7d0b438fa84103cf",
+  "candidates": [
+    {
+      "x": 0.4860756073576805
+    }
+  ],
+  "diagnostics": {
+    "study": "gp-test-7c4b69e687a88fa69c820aae",
+    "trial_ids": [
+      4
+    ],
+    "algorithm": "DEFAULT",
+    "scope": "request-scoped study projection; outstanding suggestions retained",
+    "backend": "vizier",
+    "proposal_seconds": 12.469809696001903,
+    "observation_ids": [
+      "0",
+      "1",
+      "2"
+    ],
+    "pending_ids": [],
+    "versions": {
+      "bo-craft": "0.1.0",
+      "torch": "2.6.0+cpu",
+      "botorch": "0.18.1",
+      "gpytorch": "1.15.2",
+      "optuna": "5.0.0"
+    }
+  }
+}

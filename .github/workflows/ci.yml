@@ -1,0 +1,27 @@
+name: cpu
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      # The tested CPU pins (Torch from the PyTorch CPU index), then this package.
+      - run: python -m pip install -r requirements-tested.txt pytest ruff build
+      - run: python -m pip install -e '.[botorch,optuna,test]'
+      - run: pytest -q
+      - run: ruff check .
+      - run: ruff format --check src tests benchmarks examples
+      - name: Recorded evidence and the bounded benchmark smoke profile
+        run: |
+          python benchmarks/verify_evidence.py
+          python benchmarks/campaign.py --output "$RUNNER_TEMP/smoke" --seeds 1
+      - run: python -m build
+      - name: A minimal install imports neither Torch nor Optuna
+        run: |
+          python -m venv "$RUNNER_TEMP/minimal"
+          "$RUNNER_TEMP/minimal/bin/pip" install dist/*.whl
+          "$RUNNER_TEMP/minimal/bin/python" -c "import sys, bo_craft; assert not {'torch', 'optuna'} & set(sys.modules)"
+          "$RUNNER_TEMP/minimal/bin/bo-craft" capabilities
