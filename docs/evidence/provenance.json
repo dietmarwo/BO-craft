@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-16",
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu_count": 9,
+  "source_tree": "BO-craft",
+  "numeric_tests": "see delivery implementation log",
+  "source_files_sha256": {
+    "src/bo_craft/__init__.py": "9ad6393026e27444801c580f7181493aa757481a1398bf084ae4e5472b344220",
+    "src/bo_craft/api.py": "e3659673e9f2f08652ec7936ec112440a0846e988f3b1ef350a39397af3d4aa9",
+    "src/bo_craft/backends/__init__.py": "3fbc603d47ff077efacfb77f0886cf3cd118452545f69f762ec0ec267e3be37e",
+    "src/bo_craft/backends/botorch.py": "8f6e96efce81e76334aa701bf09fecef3009a06926cf2a15e1834013ef2ba4d6",
+    "src/bo_craft/backends/optuna.py": "0c8805f669c88dadcf6974d3ab3281c561c43a9a9497bed4d2119d5961e3852d",
+    "src/bo_craft/backends/services.py": "51bb1a9b5484f7d7c2898557af2574f2cd63fe05232cd90bde1eda07e8553e76",
+    "src/bo_craft/cli.py": "d72fb56c52550c6df1e3f19faae10af056f8251c3808e9a2b919b49352d10bca",
+    "src/bo_craft/io.py": "c3f3b0c85317d9bcb0addcb552b221d07b3c1c6897efa43c497e058bdee8da89",
+    "src/bo_craft/pruning.py": "a7152653e2e1d62a2c488f448909997fc7d2a7535913b800d9fb46cca406251f",
+    "src/bo_craft/schemas/observation-0.1.schema.json": "9f351d1ed8b9f3f845a8fefb2d455b29100691a56d72ad64ef851c2a1690e635",
+    "src/bo_craft/schemas/problem-0.1.schema.json": "06cdf3a7651142acc6f22686cc8d63300f3a0864383705b9edee4e93e2f01559",
+    "src/bo_craft/schemas/proposal-0.1.schema.json": "327b7e40af4a75d25da84b7bfdd0cc475a51732c9bd392636d915f74116e9c51",
+    "src/bo_craft/schemas/request-0.1.schema.json": "cc85156586720525a3402312279576b7f70ac913a757a8a663c9b14cb5f5e670",
+    "src/bo_craft/specs.py": "803ac3be5d13cabe7dda25034900736c792b66b038023e3173a00ddcc7f15c77"
+  }
+}

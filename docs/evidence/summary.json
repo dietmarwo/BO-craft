@@ -1,0 +1,94 @@
+{
+  "records": 180,
+  "failed": 0,
+  "rows": [
+    {
+      "problem": "noisy",
+      "method": "random",
+      "median_latent_loss": 0.02263516639002637,
+      "feasible_runs": 30,
+      "median_seconds": 0.029802578499584342,
+      "pairs": 30,
+      "geometric_ratio": 1.0,
+      "ratio_95_interval": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "problem": "noisy",
+      "method": "botorch",
+      "median_latent_loss": 0.011347401275624256,
+      "feasible_runs": 30,
+      "median_seconds": 4.592538991499168,
+      "pairs": 30,
+      "geometric_ratio": 0.29627013266482627,
+      "ratio_95_interval": [
+        0.11584023723357255,
+        0.6999139673617819
+      ]
+    },
+    {
+      "problem": "noisy",
+      "method": "optuna",
+      "median_latent_loss": 0.010252129892483152,
+      "feasible_runs": 30,
+      "median_seconds": 0.16412058749847347,
+      "pairs": 30,
+      "geometric_ratio": 0.7277165652368822,
+      "ratio_95_interval": [
+        0.2965054541346711,
+        1.735918206412584
+      ]
+    },
+    {
+      "problem": "constrained",
+      "method": "random",
+      "median_latent_loss": 0.16305134743358501,
+      "feasible_runs": 30,
+      "median_seconds": 0.03052575699894078,
+      "pairs": 30,
+      "geometric_ratio": 1.0,
+      "ratio_95_interval": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "problem": "constrained",
+      "method": "botorch",
+      "median_latent_loss": 0.01767584087174684,
+      "feasible_runs": 30,
+      "median_seconds": 6.897296891999758,
+      "pairs": 30,
+      "geometric_ratio": 0.14524113378052683,
+      "ratio_95_interval": [
+        0.08991392492783885,
+        0.23688845137073317
+      ]
+    },
+    {
+      "problem": "constrained",
+      "method": "optuna",
+      "median_latent_loss": 0.09957139244022706,
+      "feasible_runs": 30,
+      "median_seconds": 0.19721802000185562,
+      "pairs": 30,
+      "geometric_ratio": 0.7056128259889216,
+      "ratio_95_interval": [
+        0.4236576943598001,
+        1.2076917662603437
+      ]
+    }
+  ],
+  "scope": "1D synthetic known-mean noisy and constrained examples; 12 calls, 4 shared initial observations; 30 seeds. No broad optimizer superiority claim.",
+  "highdim_pilot": {
+    "records": 15,
+    "failed": 0,
+    "medians": {
+      "random": 5.3123858435666556,
+      "botorch": 4.709358061074898,
+      "optuna": 5.2013914223967
+    }
+  }
+}

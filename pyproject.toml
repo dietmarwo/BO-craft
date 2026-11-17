@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "bo-craft"
+version = "0.1.0"
+description = "Typed Bayesian optimization proposals for reproducible experiment campaigns"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["jsonschema>=4.18,<5"]
+[project.optional-dependencies]
+botorch = ["botorch==0.18.1", "torch>=2.6"]
+optuna = ["optuna==5.0.0"]
+vizier = ["google-vizier[jax]==0.1.24", "jax==0.4.35", "jaxlib==0.4.35", "flax==0.10.2", "optax==0.2.4", "chex==0.1.88", "equinox==0.11.7", "orbax-checkpoint==0.11.5"]
+test = ["pytest>=8", "ruff"]
+[project.scripts]
+bo-craft = "bo_craft.cli:main"
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.setuptools.package-data]
+bo_craft = ["schemas/*.json"]
+[tool.ruff]
+line-length = 110
+[tool.pytest.ini_options]
+testpaths = ["tests"]
