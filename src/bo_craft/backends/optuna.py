@@ -20,25 +20,59 @@ def propose(request):
     except ImportError as exc:
         raise Error("missing_dependency", "install bo-craft[optuna]") from exc
     p, c = request["problem"], request["config"]
-    require("fidelity" not in p, "unsupported_combination", "TPE adapter does not model fidelities")
-    require(c.get("acquisition") is None, "unsupported_combination", "TPE has no GP acquisition option")
+    require("fidelity" not in p, "unsupported_combination", "the Optuna adapter does not model fidelities")
+    require(
+        c.get("acquisition") is None, "unsupported_combination", "Optuna has no BoTorch acquisition option"
+    )
+    sampler_kind = c.get("sampler", "tpe")
+    # Settings that change BoTorch's algorithm must not be silently ignored here.
+    botorch_only = ["trust_region", "replication", "outcome_transform", "num_fantasies", "acq_maxiter"]
+    require(
+        not any(k in c for k in botorch_only),
+        "unsupported_combination",
+        "selected configuration belongs to the BoTorch backend",
+    )
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     constraints = p.get("constraints", [])
-    multivariate = c.get("multivariate", True)
-    group = c.get("group", multivariate)
-    require(not group or multivariate, "unsupported_combination", "group requires multivariate TPE")
+    if sampler_kind == "gp":
+        require(
+            not any(k in c for k in ["multivariate", "group", "constant_liar"]),
+            "unsupported_combination",
+            "multivariate, group and constant_liar are TPE settings",
+        )
+        require(
+            not any(v.get("active_if") for v in p["parameters"]),
+            "unsupported_combination",
+            "the Optuna GP sampler needs an unconditional space; use TPE",
+        )
+        require(
+            not p.get("input_constraints"),
+            "unsupported_combination",
+            "the Optuna GP sampler does not handle linear input constraints",
+        )
+        # Constraint values are read from the trials' system attributes.
+        sampler = optuna.samplers.GPSampler(
+            seed=request["seed"],
+            n_startup_trials=c.get("initial_points", 8),
+            deterministic_objective=c.get("noise", "inferred") == "deterministic",
+        )
+        multivariate = group = None
+    else:
+        multivariate = c.get("multivariate", True)
+        group = c.get("group", multivariate)
+        require(not group or multivariate, "unsupported_combination", "group requires multivariate TPE")
 
-    def constraint_values(trial):
-        return trial.user_attrs["constraints"]
+        def constraint_values(trial):
+            return trial.user_attrs["constraints"]
 
-    sampler = optuna.samplers.TPESampler(
-        seed=request["seed"],
-        n_startup_trials=c.get("initial_points", 8),
-        multivariate=multivariate,
-        group=group,
-        constant_liar=c.get("constant_liar", True),
-        constraints_func=constraint_values if constraints else None,
-    )
+        sampler = optuna.samplers.TPESampler(
+            seed=request["seed"],
+            n_startup_trials=c.get("initial_points", 8),
+            multivariate=multivariate,
+            group=group,
+            constant_liar=c.get("constant_liar", True),
+            constraints_func=constraint_values if constraints else None,
+        )
     study = optuna.create_study(directions=[m["direction"] for m in p["objectives"]], sampler=sampler)
     for o in request.get("observations", []):
         dist = {v["name"]: distribution(v) for v in p["parameters"] if active(v, o["x"])}
@@ -97,12 +131,16 @@ def propose(request):
             occupied.add(canonical(x))
             points.append(x)
         if len(points) == request["q"]:
-            return points, {
-                "phase": "tpe",
+            diagnostic = {
+                "phase": sampler_kind,
                 "state": "rebuilt from immutable observations and pending",
-                "sampler": "TPESampler",
+                "sampler": "GPSampler" if sampler_kind == "gp" else "TPESampler",
                 "seed": request["seed"],
-                "multivariate": multivariate,
-                "group": group,
             }
-    raise Error("candidate_exhausted", "TPE cannot produce distinct feasible candidates within 256 attempts")
+            if sampler_kind == "tpe":
+                diagnostic.update(multivariate=multivariate, group=group)
+            return points, diagnostic
+    raise Error(
+        "candidate_exhausted",
+        "the Optuna sampler cannot produce distinct feasible candidates in 256 attempts",
+    )

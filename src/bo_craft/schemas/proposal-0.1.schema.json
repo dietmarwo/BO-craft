@@ -32,6 +32,19 @@
     },
     "diagnostics": {
       "type": "object"
+    },
+    "replicate_of": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "minLength": 1,
+        "maxLength": 512
+      },
+      "minItems": 1,
+      "maxItems": 32
     }
   },
   "required": [

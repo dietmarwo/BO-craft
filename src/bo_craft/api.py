@@ -24,22 +24,32 @@ def capabilities():
         "backends": {
             "random": {"spaces": ["continuous", "integer", "categorical", "conditional"], "model": False},
             "botorch": {
-                "spaces": ["continuous"],
+                "spaces": ["continuous", "integer", "categorical"],
                 "noise": ["known", "inferred", "deterministic"],
                 "constraints": True,
                 "multiobjective": True,
                 "multifidelity": "scalar continuous",
                 "pending": True,
+                "outcome_transforms": ["standardize", "log", "bilog"],
+                "replication": ["none", "incumbent (experimental)"],
+                "trust_region": "experimental, scalar unconstrained continuous",
                 "device": "cpu",
                 "precision": "float64",
             },
             "optuna": {
-                "spaces": ["continuous", "integer", "categorical", "conditional"],
-                "algorithm": "TPE",
+                "samplers": {
+                    "tpe": {
+                        "spaces": ["continuous", "integer", "categorical", "conditional"],
+                        "noise_model": False,
+                    },
+                    "gp": {
+                        "spaces": ["continuous", "integer", "categorical"],
+                        "noise": ["inferred", "deterministic"],
+                    },
+                },
                 "constraints": True,
                 "multiobjective": True,
                 "pending": True,
-                "noise_model": False,
                 "pruning": "single objective via intermediate contract",
             },
             "vizier": {
@@ -51,6 +61,7 @@ def capabilities():
                 "requires": "existing campaign and capability contract",
             },
         },
+        "recommendations": ["empirical", "model", "posterior"],
         "execution": "caller owned; adaptive campaigns in experiment-craft",
     }
 
@@ -110,11 +121,26 @@ def propose(request):
 
         points, diagnostic = backend(request)
     require(len(points) == request["q"], "backend_protocol", "wrong suggestion cardinality")
-    occupied = {canonical(o["x"]) for o in request.get("observations", []) + request.get("pending", [])}
-    for point in points:
+    replicate_of = diagnostic.pop("replicate_of", None) or [None] * len(points)
+    require(len(replicate_of) == len(points), "backend_protocol", "replicate list cardinality")
+    completed = {o["id"]: o for o in request.get("observations", []) if o["status"] == "completed"}
+    observed = {canonical(o["x"]) for o in request.get("observations", [])}
+    occupied = {canonical(o["x"]) for o in request.get("pending", [])}
+    for point, source in zip(points, replicate_of):
         validate_point(request["problem"], point)
         key = canonical(point)
-        require(key not in occupied, "duplicate_candidate", "backend suggested an existing or pending point")
+        if source is not None:
+            # Only a declared replicate of a completed observation may repeat a point.
+            require(
+                request["config"].get("replication", "none") != "none"
+                and source in completed
+                and canonical(completed[source]["x"]) == key,
+                "backend_protocol",
+                "undeclared or mismatched replicate",
+            )
+        else:
+            require(key not in observed, "duplicate_candidate", "backend suggested an existing point")
+        require(key not in occupied, "duplicate_candidate", "backend suggested a pending point")
         occupied.add(key)
     diagnostic.update(
         {
@@ -138,17 +164,25 @@ def propose(request):
         "candidates": points,
         "diagnostics": diagnostic,
     }
+    if any(source is not None for source in replicate_of):
+        result["replicate_of"] = replicate_of
     schema_check(result, "proposal")
     return result
 
 
 def recommend(request, *, kind="empirical"):
     validate_request(request)
-    require(kind in ("empirical", "posterior"), "invalid_spec", "recommendation kind")
+    require(kind in ("empirical", "model", "posterior"), "invalid_spec", "recommendation kind")
     if kind == "posterior":
         from .backends.botorch import posterior_recommendation
 
         return posterior_recommendation(request)
+    if kind == "model":
+        try:
+            from .backends.botorch import model_recommendation
+        except ImportError as exc:  # pragma: no cover - import is lazy inside
+            raise Error("missing_dependency", "install bo-craft[botorch]") from exc
+        return model_recommendation(request)
     usable = [o for o in request.get("observations", []) if o["status"] == "completed"]
     if "fidelity" in request["problem"]:
         fidelity = request["problem"]["fidelity"]
